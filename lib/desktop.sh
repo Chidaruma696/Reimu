@@ -42,7 +42,7 @@ desktop_install() {
   [[ "$REIMU_DESKTOP" == none ]] && { desktop_gpu; return 0; }
   msg "Desktop: $REIMU_DESKTOP"
   local -a pkgs=() all
-  read -r -a all <<< "$(desktop_packages)"
+  read -r -a all <<< "$(desktop_packages "$REIMU_DESKTOP")"
   local p
   for p in "${all[@]}"; do
     # NetworkManager applets only make sense with NetworkManager.
