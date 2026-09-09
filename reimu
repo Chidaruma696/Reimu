@@ -37,7 +37,7 @@ while (( $# )); do
   shift
 done
 
-trap 'err "Something went wrong at ${BASH_SOURCE[0]##*/}:$LINENO. Log: $REIMU_LOG"; disk_unmount' ERR
+trap 'err "Something went wrong at ${BASH_SOURCE[0]##*/}:$LINENO while running: $BASH_COMMAND"; err "Log: $REIMU_LOG"; disk_unmount' ERR
 
 log_init
 banner
