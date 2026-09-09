@@ -27,6 +27,17 @@ usage() {
 
 CONFIG_SRC=""; SAVE_ONLY=""; RESUME=0; NO_TMUX="${REIMU_NO_TMUX:-0}"
 ORIG_ARGS=("$@")
+
+# The left column of the tmux layout: logo, then the phase list (never returns).
+if [[ "${1:-}" == --side-pane ]]; then
+  file="$2"
+  while true; do
+    printf '\033[H\033[2J'
+    printf '\n  \e[38;5;196m\e[1m霊夢 Reimu\e[0m\n  \e[2mArch Linux installer v%s\e[0m\n\n' "$REIMU_VERSION"
+    cat "$file" 2>/dev/null
+    sleep 1
+  done
+fi
 while (( $# )); do
   case "$1" in
     --config|-c) CONFIG_SRC="$2"; shift ;;
@@ -56,11 +67,14 @@ if ! (( NO_TMUX )) && ! (( DRY_RUN )) && [[ -z "${TMUX:-}" && -t 0 && -t 1 ]] &&
   self="$(readlink -f "${BASH_SOURCE[0]}")"
   child="REIMU_NO_TMUX=1 $(printf '%q ' "$self" "${ORIG_ARGS[@]}"); rc=\$?; printf '\\n  Reimu finished (exit %s). Press Enter to close this window.' \"\$rc\"; read -r _"
   tmux kill-session -t reimu 2>/dev/null || true
-  tmux new-session -d -s reimu -x "$(tput cols 2>/dev/null || echo 200)" -y "$(tput lines 2>/dev/null || echo 50)" "$child"
-  tmux set-option -t reimu status-style "bg=colour196,fg=colour255" \; set-option -t reimu status-left " 霊夢 Reimu " \; set-option -t reimu status-right " Ctrl+b then arrows to move between panes " \; set-option -t reimu status-right-length 60 \; set-option -t reimu mouse on
-  tmux split-window -t reimu -h -l 42% "watch -t -n 1 cat $REIMU_RUN_DIR/progress"
-  tmux split-window -t reimu -v -l 72% "printf '\\033[2m  live log · %s\\033[0m\\n' '$REIMU_LOG'; tail -F -n 200 '$REIMU_LOG'"
-  tmux select-pane -t reimu:0.0
+  cols="$(tput cols 2>/dev/null || echo 200)"; lines="$(tput lines 2>/dev/null || echo 50)"
+  side=30; (( cols < 110 )) && side=24
+  # Main pane: the installer. Left column: logo on top, phase list below. Bottom right: the live log.
+  tmux new-session -d -s reimu -x "$cols" -y "$lines" "$child"
+  tmux set-option -t reimu status-style "bg=colour196,fg=colour255" \; set-option -t reimu status-left " 霊夢 Reimu " \; set-option -t reimu status-right " Ctrl+b then arrows to move between panes " \; set-option -t reimu status-right-length 60 \; set-option -t reimu mouse on \; set-option -t reimu pane-border-style "fg=colour238" \; set-option -t reimu pane-active-border-style "fg=colour196"
+  tmux split-window -t reimu:0.0 -h -b -l "$side" "$(printf '%q' "$self") --side-pane $REIMU_RUN_DIR/progress"
+  tmux split-window -t reimu:0.1 -v -l 32% "printf '\\033[2m  live log · %s\\033[0m\\n' '$REIMU_LOG'; tail -F -n 200 '$REIMU_LOG'"
+  tmux select-pane -t reimu:0.1
   exec tmux attach-session -t reimu
 fi
 
