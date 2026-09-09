@@ -1,0 +1,58 @@
+# Reimu configuration · example
+# Usage:  reimu --config reimu.conf            (asks only for passwords)
+#         reimu --config reimu.conf --yes      (fully unattended; passwords from the environment:
+#                                              REIMU_USER_PASSWORD, REIMU_ROOT_PASSWORD, REIMU_LUKS_PASSWORD)
+# Passwords are never stored in this file.
+
+# --- language, keyboard, time ------------------------------------------------
+REIMU_KEYMAP="la-latin1"            # us · la-latin1 · es · br-abnt2 · …  (localectl list-keymaps)
+REIMU_LOCALE="es_MX.UTF-8"
+REIMU_EXTRA_LOCALES="en_US.UTF-8 ja_JP.UTF-8"
+REIMU_TIMEZONE="America/Mexico_City"
+REIMU_HOSTNAME="hakurei"
+REIMU_MIRROR_COUNTRIES="MX,US"      # reflector countries; empty = worldwide
+
+# --- disk ---------------------------------------------------------------------
+REIMU_DISK="/dev/nvme0n1"
+REIMU_DISK_MODE="auto"              # auto (wipe the disk) · manual (partitions below)
+REIMU_FS="btrfs"                    # btrfs · ext4 · xfs
+REIMU_ENCRYPT="no"                  # yes = LUKS2 on root
+REIMU_SWAP="zram"                   # zram · partition · file · none
+REIMU_SWAP_SIZE="4096"              # MiB for zram, GiB for partition/file
+REIMU_SNAPSHOTS="yes"               # btrfs only: snapper + snap-pac (+ grub-btrfs with GRUB)
+# manual mode only:
+REIMU_PART_BOOT=""
+REIMU_PART_ROOT=""
+REIMU_PART_HOME=""
+REIMU_PART_SWAP=""
+REIMU_FORMAT_HOME="no"
+
+# --- boot ---------------------------------------------------------------------
+REIMU_BOOTLOADER="systemd-boot"     # systemd-boot (UEFI) · grub (UEFI or BIOS)
+REIMU_KERNELS="linux linux-lts"
+
+# --- users --------------------------------------------------------------------
+REIMU_USER="reimu"
+REIMU_USER_SHELL="zsh"              # bash · zsh · fish
+REIMU_SUDO="sudo"                   # sudo · doas
+REIMU_ROOT_LOGIN="no"               # no = root account locked
+
+# --- network and services -----------------------------------------------------
+REIMU_NETWORK="networkmanager"      # networkmanager · iwd · systemd-networkd
+REIMU_BLUETOOTH="auto"              # auto · yes · no
+REIMU_PRINTING="yes"
+REIMU_FIREWALL="firewalld"          # no · firewalld · ufw
+REIMU_SSH="no"
+REIMU_MULTILIB="yes"
+
+# --- desktop ------------------------------------------------------------------
+REIMU_DESKTOP="xfce"                # none · gnome · plasma · xfce · cinnamon · mate · budgie · lxqt · hyprland · sway · niri · i3
+REIMU_DISPLAY_MANAGER="auto"        # auto · gdm · sddm · lightdm · ly · none
+REIMU_XFCE_WIN2K="yes"              # fetch the Win2k Undead theme (XFCE only)
+REIMU_GPU="auto"                    # auto · intel · amd · nvidia · nvidia-proprietary · nouveau · vm · none
+
+# --- software -----------------------------------------------------------------
+REIMU_AUR="paru"                    # paru · yay · none
+REIMU_CATALOG="development internet multimedia utilities fonts japanese"
+REIMU_EXTRA_PACKAGES="fastfetch"
+REIMU_SERVICES=""

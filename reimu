@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Reimu · an Arch Linux installer that asks the right questions and finishes the job.
+#
+#   reimu                       interactive
+#   reimu --config FILE|URL     load a configuration, ask only for what is missing
+#   reimu --config FILE --yes   unattended (passwords from REIMU_USER_PASSWORD / REIMU_ROOT_PASSWORD / REIMU_LUKS_PASSWORD)
+#   reimu --dry-run             print every command instead of running it
+#   reimu --save FILE           after the wizard, save the configuration and exit
+set -Eeuo pipefail
+
+REIMU_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+export REIMU_DIR
+
+# shellcheck source=lib/core.sh
+source "$REIMU_DIR/lib/core.sh"
+for _lib in ui detect config wizard disk base boot system desktop software apply; do
+  # shellcheck disable=SC1090
+  source "$REIMU_DIR/lib/$_lib.sh"
+done
+
+usage() {
+  sed -n '2,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  exit 0
+}
+
+CONFIG_SRC=""; SAVE_ONLY=""
+while (( $# )); do
+  case "$1" in
+    --config|-c) CONFIG_SRC="$2"; shift ;;
+    --yes|-y) ASSUME_YES=1 ;;
+    --dry-run|-n) DRY_RUN=1 ;;
+    --save|-s) SAVE_ONLY="$2"; shift ;;
+    --version|-V) printf 'reimu %s\n' "$REIMU_VERSION"; exit 0 ;;
+    --help|-h) usage ;;
+    *) die "Unknown option: $1 (try --help)" ;;
+  esac
+  shift
+done
+
+trap 'err "Something went wrong at ${BASH_SOURCE[0]##*/}:$LINENO. Log: $REIMU_LOG"; disk_unmount' ERR
+
+log_init
+banner
+require_root
+
+if ! (( DRY_RUN )); then
+  has pacstrap || die "pacstrap not found. Reimu runs from the Arch Linux live ISO."
+  network_ok || die "No internet connection. Connect first (iwctl for Wi-Fi) and try again."
+fi
+
+detect_all
+(( DRY_RUN )) || detect_geo
+msg "Firmware $DETECT_FIRMWARE · CPU $DETECT_CPU · GPU $DETECT_GPU · RAM ${DETECT_RAM_MIB} MiB$( [[ "$DETECT_VIRT" != none ]] && printf ' · VM %s' "$DETECT_VIRT" )"
+
+[[ -n "$CONFIG_SRC" ]] && config_load_any "$CONFIG_SRC"
+config_defaults
+
+# Passwords for unattended runs.
+USER_PASSWORD="${REIMU_USER_PASSWORD:-}"
+ROOT_PASSWORD="${REIMU_ROOT_PASSWORD:-}"
+LUKS_PASSWORD="${REIMU_LUKS_PASSWORD:-}"
+
+if [[ -n "$SAVE_ONLY" ]]; then
+  REIMU_SAVE_PATH="$SAVE_ONLY"
+  wizard
+  config_save "$SAVE_ONLY"
+  exit 0
+fi
+
+if (( ASSUME_YES )) && [[ -n "$CONFIG_SRC" ]]; then
+  config_validate || die "The configuration is incomplete."
+else
+  wizard
+fi
+
+apply_summary
+apply_confirm
+apply_install

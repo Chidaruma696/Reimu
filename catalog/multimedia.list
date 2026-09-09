@@ -1,0 +1,14 @@
+# Multimedia: players, codecs, recording and editing
+vlc
+mpv
+yt-dlp
+ffmpeg
+gst-plugins-good
+gst-plugins-bad
+gst-plugins-ugly
+gst-libav
+obs-studio
+audacity
+kdenlive
+handbrake
+aur:spotify

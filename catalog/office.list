@@ -1,0 +1,11 @@
+# Office: LibreOffice, spell checking, mail, PDF
+libreoffice-fresh
+hunspell
+hunspell-en_us
+hunspell-es_any
+hyphen
+hyphen-en
+libmythes
+mythes-en
+thunderbird
+pdfarranger

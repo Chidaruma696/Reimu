@@ -1,0 +1,9 @@
+# Utilities: monitoring, disks, backups, archives
+btop
+ncdu
+tree
+gparted
+gnome-disk-utility
+timeshift
+file-roller
+tldr
