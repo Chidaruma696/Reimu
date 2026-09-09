@@ -28,7 +28,8 @@ detect_all() {
   fi
 
   if has systemd-detect-virt; then
-    DETECT_VIRT="$(systemd-detect-virt 2>/dev/null || echo none)"
+    DETECT_VIRT="$(systemd-detect-virt 2>/dev/null)" || DETECT_VIRT="none"
+    [[ -z "$DETECT_VIRT" ]] && DETECT_VIRT="none"
     [[ "$DETECT_VIRT" != none ]] && DETECT_GPU="vm"
   fi
 
@@ -39,6 +40,7 @@ detect_all() {
   if [[ -r /proc/meminfo ]]; then
     DETECT_RAM_MIB=$(( $(awk '/MemTotal/ {print $2}' /proc/meminfo) / 1024 ))
   fi
+  return 0
 }
 
 # Timezone and country from the network, with a short timeout. Silent on failure.
@@ -49,6 +51,7 @@ detect_geo() {
   [[ "$tz" =~ ^[A-Za-z_]+/[A-Za-z_/+-]+$ ]] && DETECT_TIMEZONE="$tz"
   cc="$(curl -fsS --max-time 4 https://ipapi.co/country 2>/dev/null || true)"
   [[ "$cc" =~ ^[A-Z]{2}$ ]] && DETECT_COUNTRY="$cc"
+  return 0
 }
 
 network_ok() {
