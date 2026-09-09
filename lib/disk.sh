@@ -145,5 +145,5 @@ disk_unmount() {
   (( DRY_RUN )) && return 0
   swapoff -a 2>/dev/null || true
   umount -R "$REIMU_MNT" 2>/dev/null || true
-  [[ -e /dev/mapper/cryptroot ]] && cryptsetup close cryptroot 2>/dev/null || true
+  if [[ -e /dev/mapper/cryptroot ]]; then cryptsetup close cryptroot 2>/dev/null || true; fi
 }
