@@ -7,7 +7,7 @@ DESKTOP_COMMON=(pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber
   gvfs gvfs-mtp gvfs-smb xdg-desktop-portal flatpak xf86-input-libinput)
 
 desktop_packages() {
-  case "$REIMU_DESKTOP" in
+  case "${1:-$REIMU_DESKTOP}" in
     gnome)    echo gnome gnome-tweaks gnome-browser-connector xdg-desktop-portal-gnome ;;
     plasma)   echo plasma-meta konsole dolphin kate ark spectacle gwenview okular kdeconnect xdg-desktop-portal-kde ;;
     xfce)     echo xfce4 xfce4-goodies xorg-server network-manager-applet xdg-desktop-portal-gtk xarchiver ristretto mousepad ;;

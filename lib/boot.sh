@@ -23,6 +23,7 @@ boot_install() {
   case "$REIMU_BOOTLOADER" in
     systemd-boot) boot_systemd ;;
     grub) boot_grub ;;
+    limine) boot_limine ;;
   esac
 }
 
@@ -67,4 +68,55 @@ boot_grub() {
   if [[ "$REIMU_SNAPSHOTS" == yes ]]; then
     chr_enable grub-btrfsd.service
   fi
+}
+
+# Limine: one small binary for UEFI and BIOS, config in /boot/limine.conf.
+boot_limine() {
+  local k cmdline entries="" first=1
+  cmdline="$(boot_cmdline)"
+  for k in $REIMU_KERNELS; do
+    entries+="
+/Arch Linux ($k)
+    protocol: linux
+    kernel_path: boot():/vmlinuz-$k
+    kernel_cmdline: $cmdline
+    module_path: boot():/initramfs-$k.img
+
+/Arch Linux ($k, fallback initramfs)
+    protocol: linux
+    kernel_path: boot():/vmlinuz-$k
+    kernel_cmdline: $cmdline
+    module_path: boot():/initramfs-$k-fallback.img
+"
+    first=0
+  done
+  write_file /boot/limine.conf <<EOF
+timeout: 3
+default_entry: 1
+$entries
+EOF
+  if [[ "$DETECT_FIRMWARE" == uefi ]]; then
+    chr mkdir -p /boot/EFI/BOOT
+    chr cp /usr/share/limine/BOOTX64.EFI /boot/EFI/BOOT/BOOTX64.EFI
+    local disk="$REIMU_DISK" partno="${PART_BOOT##*[!0-9]}"
+    [[ "$PART_BOOT" == "$disk"* ]] || disk="$(lsblk -no PKNAME "$PART_BOOT" 2>/dev/null | sed 's|^|/dev/|' || true)"
+    try arch-chroot "$REIMU_MNT" efibootmgr --create --disk "$disk" --part "$partno" --label "Limine" --loader '\EFI\BOOT\BOOTX64.EFI'
+  else
+    chr cp /usr/share/limine/limine-bios.sys /boot/limine-bios.sys
+    chr limine bios-install "$REIMU_DISK"
+  fi
+  # Keep the boot files in step with the limine package.
+  write_file /etc/pacman.d/hooks/limine.hook <<EOF
+[Trigger]
+Operation=Install
+Operation=Upgrade
+Type=Package
+Target=limine
+
+[Action]
+Description=Updating Limine boot files
+When=PostTransaction
+Exec=/bin/sh -c '$( [[ "$DETECT_FIRMWARE" == uefi ]] && printf 'cp /usr/share/limine/BOOTX64.EFI /boot/EFI/BOOT/BOOTX64.EFI' || printf 'cp /usr/share/limine/limine-bios.sys /boot/ && limine bios-install %s' "$REIMU_DISK" )'
+EOF
+  [[ "$first" == 0 ]] || true
 }

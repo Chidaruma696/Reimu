@@ -1,7 +1,8 @@
 # shellcheck shell=bash
 # Reimu · core: logging, command execution, dry-run, safety helpers.
 
-REIMU_VERSION="0.2.0"
+REIMU_VERSION="0.3.0"
+REIMU_RUN_DIR="${REIMU_RUN_DIR:-/run/reimu}"
 REIMU_LOG="${REIMU_LOG:-/var/log/reimu.log}"
 REIMU_MNT="${REIMU_MNT:-/mnt}"
 DRY_RUN="${DRY_RUN:-0}"
@@ -68,7 +69,7 @@ run() {
     if (( rc != 0 )); then
       err "Failed (exit $rc): $*"
       printf '%s' "$C_DIM"; tail -n 15 "$REIMU_LOG" | sed 's/^/    │ /'; printf '%s\n' "$C_RESET"
-      return "$rc"
+      run_recover "$@"; return $?
     fi
     printf '  %s✔ %s%s\n' "$C_DIM" "$title" "$C_RESET"
     return 0
@@ -77,8 +78,32 @@ run() {
   rc=${PIPESTATUS[0]}
   if (( rc != 0 )); then
     err "Command failed (exit $rc): $*"
-    return "$rc"
+    run_recover "$@"; return $?
   fi
+}
+
+# A command failed. Offer to retry just that command, skip it, or look around,
+# instead of throwing the whole installation away.
+RUN_NO_RECOVER="${RUN_NO_RECOVER:-0}"
+run_recover() {
+  (( RUN_NO_RECOVER )) && return 1
+  if (( ASSUME_YES )) && [[ -z "${REIMU_INTERACTIVE:-}" ]]; then return 1; fi
+  [[ -t 0 ]] || return 1
+  local what
+  export REIMU_INTERACTIVE=1
+  while true; do
+    ask_choice what "That step failed. What now?" retry \
+      "retry|Retry|Run the same command again (after a network cut, for example)" \
+      "skip|Skip|Continue without it · the rest of the installation goes on" \
+      "shell|Shell|Open a shell to look around · type exit to come back here" \
+      "abort|Abort|Stop the installation (it can be resumed later with --resume)"
+    case "$what" in
+      retry) RUN_NO_RECOVER=1 run "$@" && return 0; RUN_NO_RECOVER=0 ;;
+      skip) warn "Skipped: $*"; return 0 ;;
+      shell) printf '%sType exit to return to Reimu.%s\n' "$C_YELLOW" "$C_RESET"; bash -i || true ;;
+      abort) die "Aborted by the user. Resume later with: reimu --resume" ;;
+    esac
+  done
 }
 
 # Wait until the internet is back (network cuts must not kill an installation).
@@ -181,7 +206,32 @@ chr_pkg() {
   local p
   for p in "$@"; do [[ -n "$p" ]] && pkgs+=("$p"); done
   (( ${#pkgs[@]} )) || return 0
-  RUN_TITLE="${RUN_TITLE:-Installing ${#pkgs[@]} packages (${pkgs[0]}…)}" run_net arch-chroot "$REIMU_MNT" pacman -S --needed --noconfirm "${pkgs[@]}"
+  if RUN_NO_RECOVER=1 RUN_TITLE="${RUN_TITLE:-Installing ${#pkgs[@]} packages (${pkgs[0]}…)}" run_net arch-chroot "$REIMU_MNT" pacman -S --needed --noconfirm --ask=4 "${pkgs[@]}"; then
+    return 0
+  fi
+  # The batch failed (a package that no longer exists, a conflict…): refresh and go one by one
+  # so a single bad name does not take the whole desktop down with it.
+  warn "Installing them one by one to find the culprit…"
+  RUN_NO_RECOVER=1 RUN_TITLE="Refreshing package databases" run_net arch-chroot "$REIMU_MNT" pacman -Sy --noconfirm || true
+  local -a failed=()
+  for p in "${pkgs[@]}"; do
+    RUN_NO_RECOVER=1 RUN_TITLE="Installing $p" run_net arch-chroot "$REIMU_MNT" pacman -S --needed --noconfirm --ask=4 "$p" || failed+=("$p")
+  done
+  if (( ${#failed[@]} )); then
+    warn "Could not install: ${failed[*]}"
+    log "FAILED PACKAGES: ${failed[*]}"
+    FAILED_PACKAGES+=" ${failed[*]}"
+  fi
+  return 0
+}
+FAILED_PACKAGES=""
+
+# Phase list for the side pane (tmux layout) and anyone tailing it.
+progress_write() {
+  (( DRY_RUN )) && return 0
+  mkdir -p "$REIMU_RUN_DIR" 2>/dev/null || return 0
+  printf '%s\n' "$1" > "$REIMU_RUN_DIR/progress.tmp" && mv -f "$REIMU_RUN_DIR/progress.tmp" "$REIMU_RUN_DIR/progress"
+  return 0
 }
 
 # ---- misc ------------------------------------------------------------------

@@ -28,7 +28,7 @@ REIMU_PART_SWAP=""
 REIMU_FORMAT_HOME="no"
 
 # --- boot ---------------------------------------------------------------------
-REIMU_BOOTLOADER="systemd-boot"     # systemd-boot (UEFI) · grub (UEFI or BIOS)
+REIMU_BOOTLOADER="systemd-boot"     # systemd-boot (UEFI) · grub (UEFI or BIOS) · limine (UEFI or BIOS)
 REIMU_KERNELS="linux linux-lts"
 
 # --- users --------------------------------------------------------------------
@@ -43,8 +43,12 @@ REIMU_BLUETOOTH="auto"              # auto · yes · no
 REIMU_PRINTING="yes"
 REIMU_FIREWALL="firewalld"          # no · firewalld · ufw
 REIMU_SSH="no"
-REIMU_MULTILIB="yes"
+REIMU_MULTILIB="yes"                # kept for old files; same as putting multilib in REIMU_REPOS
 REIMU_POWER="ppd"                   # laptops: ppd (power-profiles-daemon) · tlp · none
+
+# --- repositories -------------------------------------------------------------
+REIMU_REPOS="multilib chaotic-aur"  # multilib · chaotic-aur
+REIMU_CUSTOM_REPOS=""               # name=URL name2=URL  (added with SigLevel Optional TrustAll)
 
 # --- desktop ------------------------------------------------------------------
 REIMU_DESKTOP="xfce"                # none · gnome · plasma · xfce · cinnamon · mate · budgie · lxqt · cosmic · deepin · hyprland · sway · niri · i3

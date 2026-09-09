@@ -89,3 +89,20 @@ sw_install_bundles() {
   (( ${#SW_SVC[@]} )) && chr_enable "${SW_SVC[@]}"
   return 0
 }
+
+# Human list of what a bundle installs (for the wizard).
+sw_bundle_contents() {
+  local file="$REIMU_DIR/catalog/$1.list" line out=""
+  [[ -r "$file" ]] || return 0
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%%#*}"; line="${line//[[:space:]]/}"
+    [[ -z "$line" ]] && continue
+    case "$line" in
+      svc:*|group:*|env:*) continue ;;
+      aur:*) out+=" ${line#aur:} (AUR)" ;;
+      multilib:*) out+=" ${line#multilib:}" ;;
+      *) out+=" $line" ;;
+    esac
+  done < "$file"
+  printf '%s' "${out# }"
+}

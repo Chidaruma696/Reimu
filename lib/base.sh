@@ -38,6 +38,7 @@ base_packages() {
   esac
   [[ "$REIMU_BOOTLOADER" == grub ]] && pkgs+=(grub efibootmgr os-prober)
   [[ "$REIMU_BOOTLOADER" == systemd-boot ]] && pkgs+=(efibootmgr)
+  [[ "$REIMU_BOOTLOADER" == limine ]] && pkgs+=(limine efibootmgr)
   [[ "$REIMU_SNAPSHOTS" == yes ]] && pkgs+=(snapper snap-pac)
   [[ "$REIMU_SNAPSHOTS" == yes && "$REIMU_BOOTLOADER" == grub ]] && pkgs+=(grub-btrfs inotify-tools)
   if (( DETECT_LAPTOP )); then
@@ -91,10 +92,6 @@ EOF
 
   # pacman: colors, parallel downloads, optional multilib.
   edit_file 's/^#ParallelDownloads.*/ParallelDownloads = 10/; s/^#Color$/Color/; s/^#VerbosePkgLists$/VerbosePkgLists/' /etc/pacman.conf
-  if [[ "$REIMU_MULTILIB" == yes ]]; then
-    edit_file '/^#\[multilib\]/,/^#Include/ s/^#//' /etc/pacman.conf
-    chr pacman -Sy --noconfirm
-  fi
 
   # Keep the package cache small and the mirrorlist fresh.
   chr_enable paccache.timer fstrim.timer systemd-timesyncd.service
