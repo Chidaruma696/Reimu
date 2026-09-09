@@ -20,7 +20,6 @@ boot_cmdline_extra() {
 boot_cmdline() { printf '%s %s' "$(boot_cmdline_root)" "$(boot_cmdline_extra)"; }
 
 boot_install() {
-  step "Bootloader: $REIMU_BOOTLOADER"
   case "$REIMU_BOOTLOADER" in
     systemd-boot) boot_systemd ;;
     grub) boot_grub ;;

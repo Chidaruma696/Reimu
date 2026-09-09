@@ -6,6 +6,7 @@
 #   reimu --config FILE --yes   unattended (passwords from REIMU_USER_PASSWORD / REIMU_ROOT_PASSWORD / REIMU_LUKS_PASSWORD)
 #   reimu --dry-run             print every command instead of running it
 #   reimu --save FILE           after the wizard, save the configuration and exit
+#   reimu --resume              continue an installation that was interrupted
 set -Eeuo pipefail
 
 REIMU_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
@@ -13,23 +14,24 @@ export REIMU_DIR
 
 # shellcheck source=lib/core.sh
 source "$REIMU_DIR/lib/core.sh"
-for _lib in ui detect config wizard disk base boot system desktop software apply; do
+for _lib in ui help state detect config wizard disk base boot system desktop software apply; do
   # shellcheck disable=SC1090
   source "$REIMU_DIR/lib/$_lib.sh"
 done
 
 usage() {
-  sed -n '2,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit 0
 }
 
-CONFIG_SRC=""; SAVE_ONLY=""
+CONFIG_SRC=""; SAVE_ONLY=""; RESUME=0
 while (( $# )); do
   case "$1" in
     --config|-c) CONFIG_SRC="$2"; shift ;;
     --yes|-y) ASSUME_YES=1 ;;
     --dry-run|-n) DRY_RUN=1 ;;
     --save|-s) SAVE_ONLY="$2"; shift ;;
+    --resume|-r) RESUME=1 ;;
     --version|-V) printf 'reimu %s\n' "$REIMU_VERSION"; exit 0 ;;
     --help|-h) usage ;;
     *) die "Unknown option: $1 (try --help)" ;;
@@ -42,6 +44,7 @@ trap 'err "Something went wrong at ${BASH_SOURCE[0]##*/}:$LINENO while running: 
 log_init
 banner
 require_root
+ui_init
 
 if ! (( DRY_RUN )); then
   has pacstrap || die "pacstrap not found. Reimu runs from the Arch Linux live ISO."
@@ -65,6 +68,25 @@ if [[ -n "$SAVE_ONLY" ]]; then
   wizard
   config_save "$SAVE_ONLY"
   exit 0
+fi
+
+if (( RESUME )); then
+  state_resume
+  state_done disk || die "The disk phase never finished; start over without --resume."
+  apply_summary
+  apply_install
+  exit 0
+fi
+
+if [[ -r "$(state_file)" ]] && ! (( ASSUME_YES )); then
+  state_load "$(state_file)"
+  if ask_yesno "An unfinished installation is mounted at $REIMU_MNT (done: ${STATE_DONE:-nothing}). Resume it?" y; then
+    config_load "$REIMU_MNT$STATE_DIR_REL/reimu.conf"; config_defaults
+    apply_summary
+    apply_install
+    exit 0
+  fi
+  STATE_DONE=""
 fi
 
 if (( ASSUME_YES )) && [[ -n "$CONFIG_SRC" ]]; then

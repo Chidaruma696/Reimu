@@ -108,3 +108,30 @@ suggest_swap_gib() {
   (( g > 16 )) && g=16
   printf '%s' "$g"
 }
+
+# ---- lists for the pickers ---------------------------------------------------
+list_keymaps() {
+  if has localectl; then localectl list-keymaps 2>/dev/null && return 0; fi
+  printf '%s\n' us la-latin1 es br-abnt2 de-latin1 fr it pt-latin1 uk dvorak
+}
+
+list_locales() {
+  if [[ -r /usr/share/i18n/SUPPORTED ]]; then
+    awk '$2=="UTF-8" {print $1}' /usr/share/i18n/SUPPORTED && return 0
+  fi
+  printf '%s\n' en_US.UTF-8 es_MX.UTF-8 es_ES.UTF-8 es_AR.UTF-8 es_CO.UTF-8 es_CL.UTF-8 pt_BR.UTF-8 de_DE.UTF-8 fr_FR.UTF-8 it_IT.UTF-8 ja_JP.UTF-8
+}
+
+list_timezones() {
+  if has timedatectl; then timedatectl list-timezones 2>/dev/null && return 0; fi
+  if [[ -d /usr/share/zoneinfo ]]; then
+    (cd /usr/share/zoneinfo && find . -type f -path './[A-Z]*/*' | sed 's|^\./||' | grep -v '^posix\|^right\|^Etc' | sort) && return 0
+  fi
+  printf '%s\n' UTC America/Mexico_City America/Bogota America/Lima America/Santiago America/Argentina/Buenos_Aires America/Sao_Paulo Europe/Madrid America/New_York America/Los_Angeles
+}
+
+# "CODE|Country|mirrors" from reflector, for the mirror multi-select.
+list_countries() {
+  has reflector || return 0
+  reflector --list-countries 2>/dev/null | awk 'NR>2 && $NF ~ /^[0-9]+$/ { code=$(NF-1); n=$NF; name=""; for(i=1;i<=NF-2;i++) name=name" "$i; sub(/^ /,"",name); printf "%s|%s|%s mirrors\n", code, name, n }'
+}

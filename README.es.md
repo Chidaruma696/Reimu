@@ -16,7 +16,7 @@
 
 <br/>
 
-*Una sola pasada de la ISO al escritorio terminado · interactivo o desde un archivo de configuración · sin instalar nada antes*
+*Una sola pasada de la ISO al escritorio terminado · cada pregunta explicada · aguanta cortes de internet · configuraciones repetibles*
 
 </div>
 
@@ -30,6 +30,8 @@
 ## 🗺️ Qué es
 
 Reimu es un instalador en Bash para Arch Linux que corre desde la ISO oficial. Pregunta lo que importa (qué disco, qué sistema de archivos, si quieres swap, qué bootloader, qué escritorio), instala el sistema base, entra al sistema nuevo con `arch-chroot` y sigue hasta dejar un escritorio funcionando con todo lo que un Arch recién instalado termina necesitando de todos modos: `xdg-user-dirs`, PipeWire, fuentes, NetworkManager, zram, snapshots, un ayudante de AUR.
+
+Está pensado para quien instala Arch por primera vez: cada pregunta lleva una explicación corta de lo que la decisión implica en su equipo (por qué btrfs frente a ext4, qué supone LUKS, cuánto swap tiene sentido con la RAM detectada), listas para elegir en vez de cosas que escribir, y un indicador de progreso en lugar de una pared de texto de pacman. Por debajo, cada comando queda registrado, las descargas reintentan cuando se cae la conexión y una instalación interrumpida se retoma con `reimu --resume`.
 
 Existe porque [archinstall](https://github.com/archlinux/archinstall) se detiene en el sistema base y deja las carpetas de usuario, el audio y el AUR para después, y porque [aui](https://github.com/helmuthdu/aui), que sí terminaba el trabajo, dejó de mantenerse en 2022 y es anterior a systemd-boot, los snapshots de btrfs y Wayland.
 
@@ -56,7 +58,7 @@ curl -L https://github.com/Chidaruma696/Reimu/tarball/main | tar xz
 cd Chidaruma696-Reimu-*/ && ./reimu
 ```
 
-La primera vez recorre todas las secciones. Después caes en un menú que muestra lo que se va a instalar; cambia lo que quieras, guarda la configuración o arranca.
+La interfaz usa [gum](https://github.com/charmbracelet/gum), que Reimu descarga de los repositorios de Arch al arrancar (si no puede, usa preguntas de texto plano). La primera vez recorre todas las secciones con un cuadro de explicación encima de cada pregunta. Después caes en un menú que muestra lo que se va a instalar; cambia lo que quieras, guarda la configuración o arranca.
 
 ```
 Reimu · what will be installed
@@ -83,6 +85,7 @@ La interfaz está en inglés por ahora; la versión en español está en la hoja
 REIMU_USER_PASSWORD=… ./reimu --config reimu.conf --yes   # desatendido por completo
 ./reimu --config reimu.conf --dry-run --yes               # imprime cada comando, no toca nada
 ./reimu --save mi.conf                    # recorre el asistente, guarda y no instala
+./reimu --resume                          # continúa una instalación interrumpida
 ```
 
 En [`reimu.conf.example`](reimu.conf.example) están todas las claves con sus opciones. En modo desatendido las contraseñas vienen de `REIMU_USER_PASSWORD`, `REIMU_ROOT_PASSWORD` y `REIMU_LUKS_PASSWORD`.
@@ -101,7 +104,8 @@ En [`reimu.conf.example`](reimu.conf.example) están todas las claves con sus op
 | **Arranque** | systemd-boot (UEFI) o GRUB (UEFI y BIOS), una entrada por kernel más la de respaldo. Kernels: linux, lts, zen, hardened, cualquier mezcla. El microcódigo lo maneja mkinitcpio. |
 | **Usuarios** | Un usuario en `wheel` con bash, zsh o fish; sudo o doas; root bloqueado salvo que lo quieras. `xdg-user-dirs` generado en el idioma del sistema. |
 | **Red** | NetworkManager · iwd + systemd-networkd · systemd-networkd. Opcionales: sshd, firewalld o ufw, Bluetooth, CUPS, multilib. |
-| **Escritorio** | GNOME, KDE Plasma, XFCE, Cinnamon, MATE, Budgie, LXQt, Hyprland, Sway, niri, i3, o ninguno. Gestor de inicio de sesión a juego o el que elijas. PipeWire, fuentes Noto (con CJK y emoji), portales, GVFS y Flatpak vienen con todos los escritorios. |
+| **Portátiles** | power-profiles-daemon (se integra con GNOME y KDE) o TLP, elegido cuando detecta batería. |
+| **Escritorio** | GNOME, KDE Plasma, XFCE, Cinnamon, MATE, Budgie, LXQt, COSMIC, Deepin, Hyprland, Sway, niri, i3, o ninguno. Gestor de inicio de sesión a juego o el que elijas. PipeWire, fuentes Noto (con CJK y emoji), portales, GVFS y Flatpak vienen con todos los escritorios. |
 | **Gráficos** | Detectado o elegido: Intel, AMD, NVIDIA módulos abiertos, NVIDIA propietario, nouveau, o herramientas de invitado para VirtualBox, VMware, QEMU/KVM e Hyper-V. NVIDIA recibe su hook de pacman. |
 | **AUR** | paru o yay, compilado dentro del chroot como tu usuario. |
 | **Paquetes** | development, office, internet, multimedia, graphics, gaming, utilities, fonts, japanese (fcitx5 + mozc), virtualization. Listas de texto plano en [`catalog/`](catalog), fáciles de editar. |
@@ -115,7 +119,9 @@ En [`reimu.conf.example`](reimu.conf.example) están todas las claves con sus op
 ```
 reimu
 ├── lib/core.sh       registro, run / run_tty / run_quiet, simulación, ayudantes de chroot, write_file
-├── lib/ui.sh         preguntas en Bash puro: texto, secreto, sí/no, opción, selección múltiple, menú
+├── lib/ui.sh         preguntas sobre gum con respaldo en Bash puro: texto, secreto, sí/no, opción, selección múltiple, menú, búsqueda
+├── lib/help.sh       las explicaciones que se muestran antes de cada pregunta
+├── lib/state.sh      progreso guardado en el disco destino, para que --resume pueda continuar
 ├── lib/detect.sh     UEFI/BIOS, CPU, GPU, virtualización, portátil, RAM, discos, zona horaria
 ├── lib/config.sh     valores por defecto, claves REIMU_*, leer (nunca ejecutar) y guardar configuraciones, validar
 ├── lib/wizard.sh     las secciones y el menú principal
@@ -129,9 +135,9 @@ reimu
 └── catalog/*.list    paquetes de software
 ```
 
-Todos los comandos pasan por `run`, que los registra en `/var/log/reimu.log` y, con `--dry-run`, los imprime en lugar de ejecutarlos. Las contraseñas van a `chpasswd` y `cryptsetup` por la entrada estándar y nunca se registran. El archivo de configuración se lee línea por línea, así que un archivo descargado de una URL no puede ejecutar nada.
+Todos los comandos pasan por `run`, que los registra en `/var/log/reimu.log`, muestra un indicador mientras corren y, con `--dry-run`, los imprime en lugar de ejecutarlos. Todo lo que descarga pasa por `run_net`: si se cae la conexión espera a que vuelva y reintenta hasta cinco veces. Las contraseñas van a `chpasswd` y `cryptsetup` por la entrada estándar y nunca se registran. El archivo de configuración se lee línea por línea, así que un archivo descargado de una URL no puede ejecutar nada.
 
-La secuencia es: mirrors → disco → pacstrap → fstab y archivo de swap → locale, hora, hostname, pacman → initramfs → bootloader → usuarios → red → servicios → snapshots → escritorio y GPU → ayudante de AUR → paquetes → initramfs y snapshot finales → desmontar. Todo lo posterior a pacstrap corre dentro de `arch-chroot /mnt`, así que no hay una segunda fase tras reiniciar.
+La secuencia es: mirrors → disco → pacstrap → fstab y archivo de swap → locale, hora, hostname, pacman → initramfs → bootloader → usuarios → red → servicios → snapshots → escritorio y GPU → ayudante de AUR → paquetes → initramfs y snapshot finales → desmontar. Todo lo posterior a pacstrap corre dentro de `arch-chroot /mnt`, así que no hay una segunda fase tras reiniciar. Cada fase queda anotada en el disco destino al terminar; si la instalación muere a medias (red, corriente, un error en un paquete), `reimu --resume` vuelve a montar el disco, pide la contraseña de cifrado si la hay y sigue desde la primera fase que no terminó.
 
 ### Paquetes de software
 
