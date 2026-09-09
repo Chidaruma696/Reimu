@@ -58,22 +58,29 @@ curl -L https://github.com/Chidaruma696/Reimu/tarball/main | tar xz
 cd Chidaruma696-Reimu-*/ && ./reimu
 ```
 
-The interface uses [gum](https://github.com/charmbracelet/gum), which Reimu fetches from the Arch repositories at start (it falls back to plain prompts if that fails). The first run walks through every section with an explanation box above each question. After that you land on a menu that shows what will be installed; change anything, save the configuration, or start.
+Reimu opens a Calamares-style layout in tmux: the questions and progress on the left, the list of phases at the top right and the live log at the bottom right (`--no-tmux` for a single pane). The interface itself uses [gum](https://github.com/charmbracelet/gum), fetched from the Arch repositories or straight from its release if the ISO's package database is stale, with plain prompts as a last resort. The first run walks through every question with an explanation box above it. After that you land on a menu with every single setting and its current value: change one, save the configuration, or start.
 
 ```
-Reimu · what will be installed
-────────────────────────────────────────────────────────────
-   1) Language, keyboard, time     la-latin1 · es_MX.UTF-8 · America/Mexico_City · hakurei
-   2) Disk                         /dev/nvme0n1 wipe · btrfs · snapshots · swap zram
-   3) Boot                         systemd-boot · linux linux-lts
-   4) Users                        reimu (zsh, sudo)
-   5) Network and services         networkmanager · cups · firewalld · multilib
-   6) Desktop                      xfce · gpu auto · win2k
-   7) Software                     aur paru · development internet multimedia fonts japanese
-   8) Save configuration to a file
-   9) Start the installation
-  10) Quit
+Everything Reimu will do · pick a line to change it
+  Keyboard layout              la-latin1
+  Language                     es_MX.UTF-8
+  Time zone                    America/Mexico_City
+  Disk                         auto · /dev/nvme0n1
+  Filesystem                   btrfs
+  Snapshots                    yes
+  Encryption                   no
+  Swap                         zram 4096
+  Bootloader                   systemd-boot
+  Kernels                      linux linux-lts
+  …
+  Extra repositories           multilib chaotic-aur
+  Desktop                      xfce
+  Software bundles             development internet fonts japanese
+  💾 Save configuration to a file
+  🚀 Start the installation
 ```
+
+When a command fails during the installation (a mirror that dropped, a package that was renamed), Reimu does not throw everything away: it shows the last lines of the log and asks whether to retry that command, skip it, open a shell to look around, or abort. Package sets that fail as a batch are retried one by one, and anything that still cannot be installed is listed at the end.
 
 ### From a configuration file
 
@@ -99,14 +106,15 @@ See [`reimu.conf.example`](reimu.conf.example) for every key with its options. U
 | **Encryption** | LUKS2 on root, unlocked by the systemd initramfs (`sd-encrypt`). |
 | **Swap** | zram (sized from your RAM) · partition · file (btrfs aware) · none. |
 | **Snapshots** | snapper + snap-pac on btrfs, a snapshot before every pacman transaction and one right after the install. With GRUB, `grub-btrfs` adds them to the boot menu. |
-| **Boot** | systemd-boot (UEFI) or GRUB (UEFI and BIOS), one entry per kernel plus fallback. Kernels: linux, lts, zen, hardened, any mix. Microcode handled by mkinitcpio. |
+| **Boot** | systemd-boot (UEFI), GRUB (UEFI and BIOS) or Limine (UEFI and BIOS), one entry per kernel plus fallback. Kernels: linux, lts, zen, hardened, any mix. Microcode handled by mkinitcpio. |
 | **Users** | One user in `wheel` with bash, zsh or fish; sudo or doas; root locked unless you want it. `xdg-user-dirs` generated in the system language. |
-| **Network** | NetworkManager · iwd + systemd-networkd · systemd-networkd. Optional sshd, firewalld or ufw, Bluetooth, CUPS, multilib. |
+| **Network** | NetworkManager · iwd + systemd-networkd · systemd-networkd. Optional sshd, firewalld or ufw, Bluetooth, CUPS. |
+| **Repositories** | multilib, [Chaotic-AUR](https://aur.chaotic.cx/) (prebuilt AUR packages, keyring and mirrorlist set up for you), and any custom repository as `name=URL`. |
 | **Laptops** | power-profiles-daemon (integrates with GNOME and KDE) or TLP, chosen when a battery is detected. |
 | **Desktop** | GNOME, KDE Plasma, XFCE, Cinnamon, MATE, Budgie, LXQt, COSMIC, Deepin, Hyprland, Sway, niri, i3, or none. Login manager picked to match or chosen by you. PipeWire, Noto fonts (CJK and emoji included), portals, GVFS and Flatpak come with every desktop. |
 | **Graphics** | Detected or chosen: Intel, AMD, NVIDIA open modules, NVIDIA proprietary, nouveau, or guest tools for VirtualBox, VMware, QEMU/KVM and Hyper-V. NVIDIA gets its pacman hook. |
 | **AUR** | paru or yay, built inside the chroot as your user. |
-| **Bundles** | development, office, internet, multimedia, graphics, gaming, utilities, fonts, japanese (fcitx5 + mozc), virtualization. Plain text lists in [`catalog/`](catalog), easy to edit. |
+| **Bundles** | development, office, internet, multimedia, graphics, gaming, utilities, fonts, japanese (fcitx5 + mozc), virtualization. The wizard shows exactly which packages each one installs before you pick. Plain text lists in [`catalog/`](catalog), easy to edit. |
 | **Housekeeping** | Parallel downloads and color in pacman, `reflector.timer`, `paccache.timer`, `fstrim.timer`, `systemd-timesyncd`, power-profiles-daemon on laptops. |
 | **XFCE extra** | Optionally fetches [Win2k Undead](https://github.com/Chidaruma696/Win2k_undead) into your home for the Windows 2000 look. |
 
@@ -122,7 +130,7 @@ reimu
 ├── lib/state.sh      progress kept on the target disk, so --resume can continue
 ├── lib/detect.sh     UEFI/BIOS, CPU, GPU, virtualization, laptop, RAM, disks, time zone
 ├── lib/config.sh     defaults, REIMU_* keys, parse (never source) and save config files, validate
-├── lib/wizard.sh     the sections and the main menu
+├── lib/wizard.sh     one small question function per setting, the guided run and the menu
 ├── lib/disk.sh       sgdisk layout, LUKS2, mkfs, btrfs subvolumes, mounts, swap file
 ├── lib/base.sh       mirrors, pacstrap, fstab, locale, hostname, pacman.conf, zram, initramfs
 ├── lib/boot.sh       systemd-boot entries or GRUB config and install
@@ -169,7 +177,7 @@ The dry run works on any machine with Bash 5 and shows the exact commands a real
 ## 🗺️ Roadmap
 
 - Hibernation with a swap partition or file (`resume=` on the kernel line).
-- Limine as a third bootloader and booting into snapshots without GRUB.
+- Booting into snapshots with Limine (limine-snapper-sync).
 - LVM on LUKS and dual-boot aware manual layouts.
 - Spanish and Japanese interface.
 

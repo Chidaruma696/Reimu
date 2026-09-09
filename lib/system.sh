@@ -148,3 +148,39 @@ sys_snapshots() {
   edit_file 's/^ALLOW_GROUPS=.*/ALLOW_GROUPS="wheel"/; s/^TIMELINE_LIMIT_HOURLY=.*/TIMELINE_LIMIT_HOURLY="5"/; s/^TIMELINE_LIMIT_DAILY=.*/TIMELINE_LIMIT_DAILY="7"/; s/^TIMELINE_LIMIT_WEEKLY=.*/TIMELINE_LIMIT_WEEKLY="0"/; s/^TIMELINE_LIMIT_MONTHLY=.*/TIMELINE_LIMIT_MONTHLY="0"/; s/^TIMELINE_LIMIT_YEARLY=.*/TIMELINE_LIMIT_YEARLY="0"/' /etc/snapper/configs/root
   chr_enable snapper-timeline.timer snapper-cleanup.timer
 }
+
+# Extra pacman repositories on the installed system.
+sys_repos() {
+  if has_word "$REIMU_REPOS" multilib; then
+    msg "multilib"
+    edit_file '/^#\[multilib\]/,/^#Include/ s/^#//' /etc/pacman.conf
+  fi
+  if has_word "$REIMU_REPOS" chaotic-aur; then
+    msg "Chaotic-AUR"
+    RUN_TITLE="Fetching the Chaotic-AUR key" run_net arch-chroot "$REIMU_MNT" pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com
+    chr pacman-key --lsign-key 3056513887B78AEB
+    RUN_TITLE="Installing the Chaotic-AUR keyring and mirrorlist" run_net arch-chroot "$REIMU_MNT" pacman -U --noconfirm --needed \
+      'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
+      'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+    if (( DRY_RUN )) || ! grep -qs '^\[chaotic-aur\]' "$REIMU_MNT/etc/pacman.conf"; then
+      append_file /etc/pacman.conf ""
+      append_file /etc/pacman.conf "[chaotic-aur]"
+      append_file /etc/pacman.conf "Include = /etc/pacman.d/chaotic-mirrorlist"
+    fi
+  fi
+  local r name url
+  for r in $REIMU_CUSTOM_REPOS; do
+    name="${r%%=*}"; url="${r#*=}"
+    msg "Custom repository $name"
+    if (( DRY_RUN )) || ! grep -qs "^\[$name\]" "$REIMU_MNT/etc/pacman.conf"; then
+      append_file /etc/pacman.conf ""
+      append_file /etc/pacman.conf "[$name]"
+      append_file /etc/pacman.conf "SigLevel = Optional TrustAll"
+      append_file /etc/pacman.conf "Server = $url"
+    fi
+  done
+  if [[ -n "$REIMU_REPOS$REIMU_CUSTOM_REPOS" ]]; then
+    RUN_TITLE="Refreshing package databases" run_net arch-chroot "$REIMU_MNT" pacman -Sy --noconfirm
+  fi
+  return 0
+}

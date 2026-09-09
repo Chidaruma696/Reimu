@@ -7,6 +7,7 @@
 #   reimu --dry-run             print every command instead of running it
 #   reimu --save FILE           after the wizard, save the configuration and exit
 #   reimu --resume              continue an installation that was interrupted
+#   reimu --no-tmux             single pane, no live log on the side
 set -Eeuo pipefail
 
 REIMU_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
@@ -20,11 +21,12 @@ for _lib in ui help state detect config wizard disk base boot system desktop sof
 done
 
 usage() {
-  sed -n '2,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit 0
 }
 
-CONFIG_SRC=""; SAVE_ONLY=""; RESUME=0
+CONFIG_SRC=""; SAVE_ONLY=""; RESUME=0; NO_TMUX="${REIMU_NO_TMUX:-0}"
+ORIG_ARGS=("$@")
 while (( $# )); do
   case "$1" in
     --config|-c) CONFIG_SRC="$2"; shift ;;
@@ -32,6 +34,7 @@ while (( $# )); do
     --dry-run|-n) DRY_RUN=1 ;;
     --save|-s) SAVE_ONLY="$2"; shift ;;
     --resume|-r) RESUME=1 ;;
+    --no-tmux) NO_TMUX=1 ;;
     --version|-V) printf 'reimu %s\n' "$REIMU_VERSION"; exit 0 ;;
     --help|-h) usage ;;
     *) die "Unknown option: $1 (try --help)" ;;
@@ -42,8 +45,26 @@ done
 trap 'err "Something went wrong at ${BASH_SOURCE[0]##*/}:$LINENO while running: $BASH_COMMAND"; err "Log: $REIMU_LOG"; disk_unmount' ERR
 
 log_init
-banner
 require_root
+
+# Calamares-style layout: the installer on the left, the phase list and the
+# live log on the right. Needs tmux (on the ISO) and a real terminal.
+if ! (( NO_TMUX )) && ! (( DRY_RUN )) && [[ -z "${TMUX:-}" && -t 0 && -t 1 ]] && has tmux; then
+  mkdir -p "$REIMU_RUN_DIR"
+  printf '  Reimu\n\n  Answering the questions…\n' > "$REIMU_RUN_DIR/progress"
+  : >> "$REIMU_LOG"
+  self="$(readlink -f "${BASH_SOURCE[0]}")"
+  child="REIMU_NO_TMUX=1 $(printf '%q ' "$self" "${ORIG_ARGS[@]}"); rc=\$?; printf '\\n  Reimu finished (exit %s). Press Enter to close this window.' \"\$rc\"; read -r _"
+  tmux kill-session -t reimu 2>/dev/null || true
+  tmux new-session -d -s reimu -x "$(tput cols 2>/dev/null || echo 200)" -y "$(tput lines 2>/dev/null || echo 50)" "$child"
+  tmux set-option -t reimu status-style "bg=colour196,fg=colour255" \; set-option -t reimu status-left " 霊夢 Reimu " \; set-option -t reimu status-right " Ctrl+b then arrows to move between panes " \; set-option -t reimu status-right-length 60 \; set-option -t reimu mouse on
+  tmux split-window -t reimu -h -l 42% "watch -t -n 1 cat $REIMU_RUN_DIR/progress"
+  tmux split-window -t reimu -v -l 72% "printf '\\033[2m  live log · %s\\033[0m\\n' '$REIMU_LOG'; tail -F -n 200 '$REIMU_LOG'"
+  tmux select-pane -t reimu:0.0
+  exec tmux attach-session -t reimu
+fi
+
+banner
 ui_init
 
 if ! (( DRY_RUN )); then
@@ -57,6 +78,7 @@ msg "Firmware $DETECT_FIRMWARE · CPU $DETECT_CPU · GPU $DETECT_GPU · RAM ${DE
 
 [[ -n "$CONFIG_SRC" ]] && config_load_any "$CONFIG_SRC"
 config_defaults
+config_normalize
 
 # Passwords for unattended runs.
 USER_PASSWORD="${REIMU_USER_PASSWORD:-}"

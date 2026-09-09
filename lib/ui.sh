@@ -16,6 +16,7 @@
 
 UI_GUM=0
 UI_WIDTH=78
+GUM_VERSION="2.0.0"
 
 # Reimu's palette for gum: shrine red, paper white, dim grey.
 ui_theme() {
@@ -34,15 +35,29 @@ ui_init() {
   if [[ ! -t 0 || ! -t 1 ]]; then
     UI_GUM=0; return 0
   fi
-  if ! has gum && ! (( DRY_RUN )) && has pacman; then
+  if ! has gum && ! (( DRY_RUN )); then
     printf '%s◆%s Preparing the interface (fetching gum)…\n' "$C_MAGENTA" "$C_RESET"
-    pacman -Sy --noconfirm --needed gum >> "$REIMU_LOG" 2>&1 || true
+    if has pacman; then
+      pacman -Sy --noconfirm --needed gum >> "$REIMU_LOG" 2>&1 || true
+    fi
+    if ! has gum && has curl; then
+      # Static binary straight from the release; works even when the ISO's package database is stale.
+      local arch tgz dir="/tmp/reimu-gum"
+      case "$(uname -m)" in x86_64) arch=x86_64 ;; aarch64) arch=arm64 ;; *) arch="" ;; esac
+      if [[ -n "$arch" ]]; then
+        tgz="https://github.com/charmbracelet/gum/releases/download/v${GUM_VERSION}/gum_${GUM_VERSION}_Linux_${arch}.tar.gz"
+        mkdir -p "$dir"
+        if curl -fsSL --max-time 60 "$tgz" | tar xz -C "$dir" --strip-components=1 2>> "$REIMU_LOG"; then
+          chmod +x "$dir/gum" 2>/dev/null; export PATH="$dir:$PATH"
+        fi
+      fi
+    fi
   fi
   if has gum; then
     UI_GUM=1; ui_theme
   else
     UI_GUM=0
-    warn "gum is not available; using plain prompts."
+    warn "gum could not be fetched (no network?). Using plain prompts: type the number of an option and press Enter."
   fi
   return 0
 }
@@ -222,7 +237,7 @@ ask_choice() {
   if (( UI_GUM )); then
     local -a opts=()
     for i in "${!keys[@]}"; do opts+=("${shown[$i]}"$'\t'"${keys[$i]}"); done
-    local h=${#keys[@]}; (( h > 14 )) && h=14
+    local h=${#keys[@]}; (( h > 16 )) && h=16
     ans="$(gum choose --header "$prompt" --height "$h" --label-delimiter $'\t' ${deflabel:+--selected "$deflabel"} "${opts[@]}")" || ans="$def"
     [[ -z "$ans" ]] && ans="$def"
     _out="$ans"
@@ -276,7 +291,7 @@ ask_multi() {
       (( on[i] )) && selected+="${selected:+,}${shown[$i]}"
     done
     local h=${#keys[@]}; (( h > 14 )) && h=14
-    mapfile -t sel < <(gum choose --no-limit --header "$prompt  (space marks · enter accepts)" --height "$h" --label-delimiter $'\t' ${selected:+--selected "$selected"} "${opts[@]}") || sel=()
+    mapfile -t sel < <(gum choose --no-limit --header "$prompt  ·  space marks, enter accepts" --height "$h" --label-delimiter $'\t' ${selected:+--selected "$selected"} "${opts[@]}") || sel=()
     # Keep item order.
     local -a result=()
     for i in "${!keys[@]}"; do has_word "${sel[*]}" "${keys[$i]}" && result+=("${keys[$i]}"); done
@@ -286,7 +301,7 @@ ask_multi() {
   fi
 
   while true; do
-    printf '%s?%s %s %s(numbers toggle · all · none · Enter accepts)%s\n' "$C_CYAN" "$C_RESET" "$prompt" "$C_DIM" "$C_RESET"
+    printf '%s?%s %s %s(type numbers to mark or unmark, e.g. 1 3 · all · none · Enter alone when done)%s\n' "$C_CYAN" "$C_RESET" "$prompt" "$C_DIM" "$C_RESET"
     for i in "${!keys[@]}"; do
       if (( on[i] )); then
         printf '   %s[x]%s %2d) %s\n' "$C_GREEN" "$C_RESET" $((i+1)) "${shown[$i]}"
@@ -329,7 +344,8 @@ ask_menu() {
     for i in "${!keys[@]}"; do
       opts+=("$(printf '%-28s %s' "${labels[$i]}" "$(_ui_clean "${values[$i]}")")"$'\t'"${keys[$i]}")
     done
-    ans="$(gum choose --header "$title" --height "${#keys[@]}" --label-delimiter $'\t' "${opts[@]}")" || ans="quit"
+    local h=${#keys[@]}; (( h > 22 )) && h=22
+    ans="$(gum choose --header "$title" --height "$h" --label-delimiter $'\t' "${opts[@]}")" || ans="quit"
     _out="$ans"
     return 0
   fi
@@ -357,11 +373,12 @@ ask_menu() {
 
 # Searchable list produced by a command (one option per line). Falls back to typing.
 ask_filter() {
+  local var="$1"
   local -n _out=$1
   local prompt="$2" def="${3:-}" ans; shift 3
   local -a lines
   mapfile -t lines < <("$@")
-  _ui_guard "$1"
+  _ui_guard "$var"
   if (( UI_GUM )) && (( ${#lines[@]} )); then
     ans="$(printf '%s\n' "${lines[@]}" | gum filter --header "$prompt" --height 12 --fuzzy ${def:+--selected "$def"})" || ans="$def"
     [[ -z "$ans" ]] && ans="$def"
@@ -369,7 +386,7 @@ ask_filter() {
     printf '  %s%s: %s%s\n' "$C_DIM" "$prompt" "$ans" "$C_RESET"
     return 0
   fi
-  ask_text _out "$prompt" "$def"
+  ask_text "$var" "$prompt" "$def"
 }
 
 pause() {

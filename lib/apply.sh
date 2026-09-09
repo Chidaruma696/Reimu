@@ -7,6 +7,7 @@ PHASES=(
   "disk|Disk|disk_prepare"
   "base|Base system|base_install"
   "configure|System configuration|base_configure"
+  "repos|Repositories|sys_repos"
   "initramfs|initramfs|base_initramfs"
   "boot|Bootloader|boot_install"
   "users|Users|sys_users"
@@ -36,6 +37,7 @@ apply_summary() {
   body+="$(printf '%-12s %s' "System" "$REIMU_HOSTNAME · $REIMU_LOCALE · $REIMU_KEYMAP · $REIMU_TIMEZONE")"$'\n'
   body+="$(printf '%-12s %s' "User" "$REIMU_USER · $REIMU_USER_SHELL · $REIMU_SUDO · root $( [[ "$REIMU_ROOT_LOGIN" == yes ]] && echo enabled || echo locked )")"$'\n'
   body+="$(printf '%-12s %s' "Network" "$REIMU_NETWORK$( [[ "$REIMU_BLUETOOTH" != no ]] && printf ' · bluetooth' )$( [[ "$REIMU_PRINTING" == yes ]] && printf ' · printing' )$( [[ "$REIMU_FIREWALL" != no ]] && printf ' · %s' "$REIMU_FIREWALL" )$( [[ "$REIMU_SSH" == yes ]] && printf ' · sshd' )$( [[ "$REIMU_MULTILIB" == yes ]] && printf ' · multilib' )")"$'\n'
+  body+="$(printf '%-12s %s' "Repos" "${REIMU_REPOS:-none}${REIMU_CUSTOM_REPOS:+ · $REIMU_CUSTOM_REPOS}")"$'\n'
   body+="$(printf '%-12s %s' "Desktop" "$REIMU_DESKTOP$( [[ "$REIMU_DESKTOP" != none ]] && printf ' · %s' "$(desktop_display_manager)" ) · gpu $REIMU_GPU")"$'\n'
   body+="$(printf '%-12s %s' "Software" "aur $REIMU_AUR · ${REIMU_CATALOG:-no bundles}${REIMU_EXTRA_PACKAGES:+ · $REIMU_EXTRA_PACKAGES}")"
   ui_box "Summary" "$body" 196
@@ -54,6 +56,21 @@ apply_confirm() {
   [[ "$ans" == YES ]] || die "Aborted. Nothing was changed."
 }
 
+# The phase list with marks, for the side pane.
+apply_progress() {
+  local current="$1" out="" ph id title mark
+  out+="  Reimu · $REIMU_HOSTNAME"$'\n'$'\n'
+  for ph in "${PHASES[@]}"; do
+    id="${ph%%|*}"; title="${ph#*|}"; title="${title%%|*}"
+    if state_done "$id" || [[ "$id" == finish && "$current" == "done" ]]; then mark="✔"
+    elif [[ "$id" == "$current" ]]; then mark="▶"
+    else mark="○"; fi
+    out+="  $mark $title"$'\n'
+  done
+  [[ "$current" == "done" ]] && out+=$'\n'"  Finished."
+  progress_write "$out"
+}
+
 apply_install() {
   local start=$SECONDS total=${#PHASES[@]} n=0 ph id title fn
   # Passwords only for the phases that still need them.
@@ -65,10 +82,12 @@ apply_install() {
       printf '  %s✔ [%s/%s] %s · already done%s\n' "$C_DIM" "$n" "$total" "$title" "$C_RESET"
       continue
     fi
+    apply_progress "$id"
     ui_phase "$n" "$total" "$title"
     "$fn"
     [[ "$id" == finish ]] || state_mark "$id"
   done
+  apply_progress "done"
   ok "Done in $(( (SECONDS - start) / 60 )) min."
   apply_goodbye
 }
@@ -99,6 +118,7 @@ apply_finish() {
 apply_goodbye() {
   local extra=""
   [[ "$REIMU_DESKTOP" == xfce && "$REIMU_XFCE_WIN2K" == yes ]] && extra=$'\n''Win2k Undead is in ~/Win2k_undead; run ./install.sh after your first login.'
+  [[ -n "$FAILED_PACKAGES" ]] && extra+=$'\n'"Packages that could not be installed (install them later by hand):$FAILED_PACKAGES"
   ui_box "Arch Linux is installed" "Take the USB out and reboot.
 Your recipe is at /root/reimu.conf and the log at /var/log/reimu/install.log.
 Rerun the same install on another machine with:  reimu --config reimu.conf${extra}" 46

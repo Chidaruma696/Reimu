@@ -67,12 +67,18 @@ EOF
 }
 
 help_bootloader() {
-  cat <<'EOF'
+  local note=""
+  if [[ "$DETECT_FIRMWARE" == bios ]]; then
+    note=$'\nThis machine booted in BIOS (legacy) mode, so systemd-boot cannot be offered.\nIn VirtualBox turn on "Enable EFI" under System; in QEMU use OVMF; on a real\nPC look for UEFI mode in the firmware setup.'
+  fi
+  cat <<EOF
 The bootloader is the tiny program that starts Linux when you turn on the
 machine.
 • systemd-boot is simple and fast, with a plain menu. UEFI only.
 • GRUB shows a full menu, can boot other systems (Windows) and can boot into
   btrfs snapshots. Works on UEFI and old BIOS machines.
+• Limine is modern and tiny, with a clean menu, and works on both UEFI and
+  BIOS.${note}
 EOF
 }
 
@@ -215,5 +221,24 @@ EOF
 help_timezone() {
   cat <<'EOF'
 Your time zone as Region/City. Type part of a city to search.
+EOF
+}
+
+help_repos() {
+  cat <<'EOF'
+Repositories are the sources pacman installs from. Arch's own are always on.
+• multilib: official 32-bit libraries; Steam, Wine and many games need it.
+• Chaotic-AUR: a community repository with thousands of AUR programs already
+  compiled (browsers, editors, games, fonts…) so you install them in seconds
+  instead of building them. Widely used; maintained by Arch community members.
+EOF
+}
+
+help_custom_repos() {
+  cat <<'EOF'
+Add any other pacman repository as name=URL, separated by spaces. The URL is
+the "Server =" line from that repository's instructions and may contain
+$arch. Reimu adds them with signatures optional and fully trusted, so only add
+repositories you trust.
 EOF
 }
