@@ -16,7 +16,7 @@
 
 <br/>
 
-*One pass from the live ISO to a finished desktop · interactive or from a config file · nothing to install first*
+*One pass from the live ISO to a finished desktop · every question explained · survives network cuts · replayable config files*
 
 </div>
 
@@ -30,6 +30,8 @@
 ## 🗺️ What it is
 
 Reimu is a Bash installer for Arch Linux that runs from the official live ISO. It asks what matters (which disk, which filesystem, swap or not, which bootloader, which desktop), installs the base system, enters the new system with `arch-chroot` and keeps going until there is a working desktop with the things every fresh Arch ends up needing anyway: `xdg-user-dirs`, PipeWire, fonts, NetworkManager, zram, snapshots, an AUR helper.
+
+It is built for someone installing Arch for the first time: every question comes with a short explanation of what the choice means for their machine (why btrfs over ext4, what LUKS implies, how much swap makes sense with the RAM it detected), lists to pick from instead of things to type, and a spinner instead of a wall of pacman output. Under the hood every command is logged, downloads retry when the connection drops, and an interrupted installation can be resumed with `reimu --resume`.
 
 It exists because [archinstall](https://github.com/archlinux/archinstall) stops at the base system and leaves the user folders, the audio stack and the AUR for later, and because [aui](https://github.com/helmuthdu/aui), which did finish the job, stopped being maintained in 2022 and predates systemd-boot, btrfs snapshots and Wayland.
 
@@ -56,7 +58,7 @@ curl -L https://github.com/Chidaruma696/Reimu/tarball/main | tar xz
 cd Chidaruma696-Reimu-*/ && ./reimu
 ```
 
-The first run walks through every section. After that you land on a menu that shows what will be installed; change anything, save the configuration, or start.
+The interface uses [gum](https://github.com/charmbracelet/gum), which Reimu fetches from the Arch repositories at start (it falls back to plain prompts if that fails). The first run walks through every section with an explanation box above each question. After that you land on a menu that shows what will be installed; change anything, save the configuration, or start.
 
 ```
 Reimu · what will be installed
@@ -81,6 +83,7 @@ Reimu · what will be installed
 REIMU_USER_PASSWORD=… ./reimu --config reimu.conf --yes   # fully unattended
 ./reimu --config reimu.conf --dry-run --yes               # print every command, touch nothing
 ./reimu --save my.conf                    # run the wizard, save, do not install
+./reimu --resume                          # continue an interrupted installation
 ```
 
 See [`reimu.conf.example`](reimu.conf.example) for every key with its options. Unattended runs take passwords from `REIMU_USER_PASSWORD`, `REIMU_ROOT_PASSWORD` and `REIMU_LUKS_PASSWORD`.
@@ -99,7 +102,8 @@ See [`reimu.conf.example`](reimu.conf.example) for every key with its options. U
 | **Boot** | systemd-boot (UEFI) or GRUB (UEFI and BIOS), one entry per kernel plus fallback. Kernels: linux, lts, zen, hardened, any mix. Microcode handled by mkinitcpio. |
 | **Users** | One user in `wheel` with bash, zsh or fish; sudo or doas; root locked unless you want it. `xdg-user-dirs` generated in the system language. |
 | **Network** | NetworkManager · iwd + systemd-networkd · systemd-networkd. Optional sshd, firewalld or ufw, Bluetooth, CUPS, multilib. |
-| **Desktop** | GNOME, KDE Plasma, XFCE, Cinnamon, MATE, Budgie, LXQt, Hyprland, Sway, niri, i3, or none. Login manager picked to match or chosen by you. PipeWire, Noto fonts (CJK and emoji included), portals, GVFS and Flatpak come with every desktop. |
+| **Laptops** | power-profiles-daemon (integrates with GNOME and KDE) or TLP, chosen when a battery is detected. |
+| **Desktop** | GNOME, KDE Plasma, XFCE, Cinnamon, MATE, Budgie, LXQt, COSMIC, Deepin, Hyprland, Sway, niri, i3, or none. Login manager picked to match or chosen by you. PipeWire, Noto fonts (CJK and emoji included), portals, GVFS and Flatpak come with every desktop. |
 | **Graphics** | Detected or chosen: Intel, AMD, NVIDIA open modules, NVIDIA proprietary, nouveau, or guest tools for VirtualBox, VMware, QEMU/KVM and Hyper-V. NVIDIA gets its pacman hook. |
 | **AUR** | paru or yay, built inside the chroot as your user. |
 | **Bundles** | development, office, internet, multimedia, graphics, gaming, utilities, fonts, japanese (fcitx5 + mozc), virtualization. Plain text lists in [`catalog/`](catalog), easy to edit. |
@@ -113,7 +117,9 @@ See [`reimu.conf.example`](reimu.conf.example) for every key with its options. U
 ```
 reimu
 ├── lib/core.sh       logging, run / run_tty / run_quiet, dry-run, chroot helpers, write_file
-├── lib/ui.sh         pure-bash prompts: text, secret, yes/no, choice, multi-select, menu
+├── lib/ui.sh         prompts on gum with a pure-bash fallback: text, secret, yes/no, choice, multi-select, menu, search
+├── lib/help.sh       the explanations shown before each question
+├── lib/state.sh      progress kept on the target disk, so --resume can continue
 ├── lib/detect.sh     UEFI/BIOS, CPU, GPU, virtualization, laptop, RAM, disks, time zone
 ├── lib/config.sh     defaults, REIMU_* keys, parse (never source) and save config files, validate
 ├── lib/wizard.sh     the sections and the main menu
@@ -127,9 +133,9 @@ reimu
 └── catalog/*.list    software bundles
 ```
 
-Every command goes through `run`, which logs it to `/var/log/reimu.log` and, with `--dry-run`, prints it instead of executing it. Passwords go through `chpasswd` and `cryptsetup` on standard input and are never logged. The configuration file is parsed line by line, so a file fetched from a URL cannot execute anything.
+Every command goes through `run`, which logs it to `/var/log/reimu.log`, shows a spinner while it runs and, with `--dry-run`, prints it instead of executing it. Anything that downloads goes through `run_net`: if the connection drops it waits for it to come back and retries up to five times. Passwords go through `chpasswd` and `cryptsetup` on standard input and are never logged. The configuration file is parsed line by line, so a file fetched from a URL cannot execute anything.
 
-The sequence is: mirrors → disk → pacstrap → fstab and swap file → locale, time, hostname, pacman → initramfs → bootloader → users → network → services → snapshots → desktop and GPU → AUR helper → bundles → final initramfs and snapshot → unmount. Everything after pacstrap runs inside `arch-chroot /mnt`, so there is no second phase after reboot.
+The sequence is: mirrors → disk → pacstrap → fstab and swap file → locale, time, hostname, pacman → initramfs → bootloader → users → network → services → snapshots → desktop and GPU → AUR helper → bundles → final initramfs and snapshot → unmount. Everything after pacstrap runs inside `arch-chroot /mnt`, so there is no second phase after reboot. Each phase is recorded on the target disk once it finishes; if the installation dies halfway (network, power, a typo in a bundle), `reimu --resume` mounts the disk again, asks for the encryption password if there is one, and picks up at the first phase that did not finish.
 
 ### Bundles
 

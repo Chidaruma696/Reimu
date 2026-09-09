@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # Reimu · core: logging, command execution, dry-run, safety helpers.
 
-REIMU_VERSION="0.1.0"
+REIMU_VERSION="0.2.0"
 REIMU_LOG="${REIMU_LOG:-/var/log/reimu.log}"
 REIMU_MNT="${REIMU_MNT:-/mnt}"
 DRY_RUN="${DRY_RUN:-0}"
@@ -43,19 +43,68 @@ step() {
 # run_tty CMD...  : same but without capturing output (interactive programs).
 # run_quiet CMD...: execute without logging arguments (secrets).
 # try CMD...      : like run but a failure only warns.
+# A short title for the spinner, derived from the command.
+run_title() {
+  local -a w=("$@")
+  [[ "${w[0]}" == arch-chroot ]] && w=("${w[@]:2}")
+  [[ "${w[0]}" == sudo ]] && w=("${w[@]:4}")
+  local t="${w[*]:0:6}"
+  (( ${#t} > 64 )) && t="${t:0:61}…"
+  printf '%s' "$t"
+}
+
 run() {
   log "\$ $*"
   if (( DRY_RUN )); then
     printf '%s  $ %s%s\n' "$C_DIM" "$*" "$C_RESET"
     return 0
   fi
-  local rc
+  local rc title="${RUN_TITLE:-}"
+  if (( UI_GUM )); then
+    [[ -n "$title" ]] || title="$(run_title "$@")"
+    # shellcheck disable=SC2016
+    gum spin --spinner dot --title "$title" -- bash -c 'exec "$@" >>"$0" 2>&1' "$REIMU_LOG" "$@"
+    rc=$?
+    if (( rc != 0 )); then
+      err "Failed (exit $rc): $*"
+      printf '%s' "$C_DIM"; tail -n 15 "$REIMU_LOG" | sed 's/^/    │ /'; printf '%s\n' "$C_RESET"
+      return "$rc"
+    fi
+    printf '  %s✔ %s%s\n' "$C_DIM" "$title" "$C_RESET"
+    return 0
+  fi
   "$@" 2>&1 | tee -a "$REIMU_LOG"
   rc=${PIPESTATUS[0]}
   if (( rc != 0 )); then
     err "Command failed (exit $rc): $*"
     return "$rc"
   fi
+}
+
+# Wait until the internet is back (network cuts must not kill an installation).
+net_wait() {
+  (( DRY_RUN )) && return 0
+  network_ok && return 0
+  warn "No internet connection. Waiting for it to come back… (Ctrl+C aborts)"
+  if (( UI_GUM )); then
+    gum spin --spinner globe --title "Waiting for the network…" -- bash -c 'until curl -fsS --max-time 6 -o /dev/null https://archlinux.org; do sleep 5; done'
+  else
+    until network_ok; do sleep 5; done
+  fi
+  ok "Network is back."
+}
+
+# run for commands that download: waits for the network and retries.
+run_net() {
+  local attempt
+  for attempt in 1 2 3 4 5; do
+    net_wait
+    if run "$@"; then return 0; fi
+    warn "Attempt $attempt of 5 failed; retrying in 10 s…"
+    sleep 10
+  done
+  err "Gave up after 5 attempts: $*"
+  return 1
 }
 
 run_tty() {
@@ -123,6 +172,7 @@ edit_file() {
 chr() { run arch-chroot "$REIMU_MNT" "$@"; }
 chr_sh() { run arch-chroot "$REIMU_MNT" /bin/bash -c "$1"; }
 chr_user() { local user="$1"; shift; run arch-chroot "$REIMU_MNT" sudo -u "$user" -H /bin/bash -c "$1"; }
+chr_user_net() { local user="$1"; shift; run_net arch-chroot "$REIMU_MNT" sudo -u "$user" -H /bin/bash -c "$1"; }
 chr_enable() { chr systemctl enable "$@"; }
 
 # Install packages inside the target system (dedup, skip empties).
@@ -131,7 +181,7 @@ chr_pkg() {
   local p
   for p in "$@"; do [[ -n "$p" ]] && pkgs+=("$p"); done
   (( ${#pkgs[@]} )) || return 0
-  chr pacman -S --needed --noconfirm "${pkgs[@]}"
+  RUN_TITLE="${RUN_TITLE:-Installing ${#pkgs[@]} packages (${pkgs[0]}…)}" run_net arch-chroot "$REIMU_MNT" pacman -S --needed --noconfirm "${pkgs[@]}"
 }
 
 # ---- misc ------------------------------------------------------------------

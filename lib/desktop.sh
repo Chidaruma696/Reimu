@@ -15,6 +15,8 @@ desktop_packages() {
     mate)     echo mate mate-extra xorg-server network-manager-applet xdg-desktop-portal-gtk ;;
     budgie)   echo budgie-desktop budgie-desktop-view budgie-control-center xorg-server gnome-terminal nautilus network-manager-applet xdg-desktop-portal-gtk ;;
     lxqt)     echo lxqt breeze-icons xorg-server network-manager-applet xdg-desktop-portal-gtk ;;
+    cosmic)   echo cosmic cosmic-greeter xdg-desktop-portal-cosmic ;;
+    deepin)   echo deepin deepin-extra xorg-server xdg-desktop-portal-gtk ;;
     hyprland) echo hyprland xdg-desktop-portal-hyprland hyprpaper hyprlock hypridle waybar foot wofi mako grim slurp wl-clipboard cliphist polkit-kde-agent qt5-wayland qt6-wayland thunar network-manager-applet brightnessctl playerctl ;;
     sway)     echo sway swaybg swaylock swayidle waybar foot wmenu mako grim slurp wl-clipboard polkit xdg-desktop-portal-wlr thunar network-manager-applet brightnessctl playerctl ;;
     niri)     echo niri xwayland-satellite waybar foot fuzzel mako swaybg swaylock swayidle grim slurp wl-clipboard polkit-kde-agent xdg-desktop-portal-gnome thunar network-manager-applet brightnessctl playerctl ;;
@@ -28,7 +30,8 @@ desktop_display_manager() {
     case "$REIMU_DESKTOP" in
       gnome) dm=gdm ;;
       plasma|lxqt|hyprland|sway|niri) dm=sddm ;;
-      xfce|mate|i3|cinnamon|budgie) dm=lightdm ;;
+      xfce|mate|i3|cinnamon|budgie|deepin) dm=lightdm ;;
+      cosmic) dm=cosmic-greeter ;;
       *) dm=none ;;
     esac
   fi
@@ -37,7 +40,7 @@ desktop_display_manager() {
 
 desktop_install() {
   [[ "$REIMU_DESKTOP" == none ]] && { desktop_gpu; return 0; }
-  step "Desktop: $REIMU_DESKTOP"
+  msg "Desktop: $REIMU_DESKTOP"
   local -a pkgs=() all
   read -r -a all <<< "$(desktop_packages)"
   local p
@@ -54,6 +57,7 @@ desktop_install() {
     sddm) chr_pkg sddm; chr_enable sddm.service ;;
     lightdm) chr_pkg lightdm lightdm-gtk-greeter lightdm-gtk-greeter-settings; chr_enable lightdm.service ;;
     ly) chr_pkg ly; chr_enable ly.service ;;
+    cosmic-greeter) chr_enable cosmic-greeter.service ;;
     none) ;;
   esac
 
@@ -63,7 +67,7 @@ desktop_install() {
 
 desktop_win2k() {
   msg "Fetching Win2k Undead for $REIMU_USER"
-  chr_user "$REIMU_USER" "git clone --depth 1 https://github.com/Chidaruma696/Win2k_undead ~/Win2k_undead"
+  RUN_TITLE="Fetching Win2k Undead" chr_user_net "$REIMU_USER" "[ -d ~/Win2k_undead ] || git clone --depth 1 https://github.com/Chidaruma696/Win2k_undead ~/Win2k_undead"
   write_file "/home/$REIMU_USER/Win2k_undead/READ-ME-FIRST.txt" <<'EOF'
 Win2k Undead was downloaded by Reimu but not applied: the theme configures
 your XFCE session, so it needs you logged in. Open a terminal and run:
@@ -78,7 +82,7 @@ desktop_gpu() {
   local gpu="$REIMU_GPU"
   [[ "$gpu" == auto ]] && gpu="$DETECT_GPU"
   [[ "$gpu" == none ]] && return 0
-  step "Graphics: $gpu"
+  msg "Graphics: $gpu"
   local -a pkgs=(mesa)
   [[ "$REIMU_MULTILIB" == yes ]] && pkgs+=(lib32-mesa)
   case "$gpu" in

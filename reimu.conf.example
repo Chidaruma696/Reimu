@@ -44,9 +44,10 @@ REIMU_PRINTING="yes"
 REIMU_FIREWALL="firewalld"          # no · firewalld · ufw
 REIMU_SSH="no"
 REIMU_MULTILIB="yes"
+REIMU_POWER="ppd"                   # laptops: ppd (power-profiles-daemon) · tlp · none
 
 # --- desktop ------------------------------------------------------------------
-REIMU_DESKTOP="xfce"                # none · gnome · plasma · xfce · cinnamon · mate · budgie · lxqt · hyprland · sway · niri · i3
+REIMU_DESKTOP="xfce"                # none · gnome · plasma · xfce · cinnamon · mate · budgie · lxqt · cosmic · deepin · hyprland · sway · niri · i3
 REIMU_DISPLAY_MANAGER="auto"        # auto · gdm · sddm · lightdm · ly · none
 REIMU_XFCE_WIN2K="yes"              # fetch the Win2k Undead theme (XFCE only)
 REIMU_GPU="auto"                    # auto · intel · amd · nvidia · nvidia-proprietary · nouveau · vm · none

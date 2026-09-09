@@ -2,18 +2,18 @@
 # Reimu · base: mirrors, pacstrap, fstab, locale, time, hostname, pacman tweaks.
 
 base_mirrors() {
-  step "Mirrors"
   (( DRY_RUN )) || timedatectl set-ntp true 2>/dev/null || true
   if has reflector; then
     local -a args=(--protocol https --latest 20 --sort rate --save /etc/pacman.d/mirrorlist)
     [[ -n "$REIMU_MIRROR_COUNTRIES" ]] && args+=(--country "$REIMU_MIRROR_COUNTRIES")
-    try reflector "${args[@]}"
+    net_wait
+    RUN_TITLE="Ranking mirrors" try reflector "${args[@]}"
   else
     warn "reflector not found, keeping the current mirrorlist."
   fi
   # Faster downloads on the live system too.
   (( DRY_RUN )) || sed -i 's/^#ParallelDownloads.*/ParallelDownloads = 10/; s/^#Color$/Color/' /etc/pacman.conf
-  run pacman -Sy --noconfirm archlinux-keyring
+  run_net pacman -Sy --noconfirm archlinux-keyring
 }
 
 base_packages() {
@@ -40,27 +40,30 @@ base_packages() {
   [[ "$REIMU_BOOTLOADER" == systemd-boot ]] && pkgs+=(efibootmgr)
   [[ "$REIMU_SNAPSHOTS" == yes ]] && pkgs+=(snapper snap-pac)
   [[ "$REIMU_SNAPSHOTS" == yes && "$REIMU_BOOTLOADER" == grub ]] && pkgs+=(grub-btrfs inotify-tools)
-  (( DETECT_LAPTOP )) && pkgs+=(power-profiles-daemon acpi)
+  if (( DETECT_LAPTOP )); then
+    pkgs+=(acpi)
+    case "$REIMU_POWER" in ppd) pkgs+=(power-profiles-daemon) ;; tlp) pkgs+=(tlp tlp-rdw) ;; esac
+  fi
   printf '%s\n' "${pkgs[@]}"
 }
 
 base_install() {
-  step "Base system"
   local -a pkgs
   mapfile -t pkgs < <(base_packages)
-  msg "pacstrap with ${#pkgs[@]} packages"
-  run pacstrap -K "$REIMU_MNT" "${pkgs[@]}"
+  msg "pacstrap with ${#pkgs[@]} packages (this is the long part)"
+  local -a flags=(-K)
+  [[ -d "$REIMU_MNT/etc/pacman.d/gnupg" ]] && flags=()
+  RUN_TITLE="Installing the base system (${#pkgs[@]} packages)" run_net pacstrap "${flags[@]}" "$REIMU_MNT" "${pkgs[@]}"
   msg "fstab"
   if (( DRY_RUN )); then
-    printf '%s  $ genfstab -U %s >> %s/etc/fstab%s\n' "$C_DIM" "$REIMU_MNT" "$REIMU_MNT" "$C_RESET"
+    printf '%s  $ genfstab -U %s > %s/etc/fstab%s\n' "$C_DIM" "$REIMU_MNT" "$REIMU_MNT" "$C_RESET"
   else
-    genfstab -U "$REIMU_MNT" >> "$REIMU_MNT/etc/fstab"
+    genfstab -U "$REIMU_MNT" > "$REIMU_MNT/etc/fstab"
   fi
   disk_swapfile
 }
 
 base_configure() {
-  step "System configuration"
   chr ln -sf "/usr/share/zoneinfo/$REIMU_TIMEZONE" /etc/localtime
   chr hwclock --systohc
 
@@ -120,17 +123,21 @@ vm.page-cluster = 0
 EOF
   fi
 
-  (( DETECT_LAPTOP )) && chr_enable power-profiles-daemon.service
+  if (( DETECT_LAPTOP )); then
+    case "$REIMU_POWER" in
+      ppd) chr_enable power-profiles-daemon.service ;;
+      tlp) chr_enable tlp.service NetworkManager-dispatcher.service; chr systemctl mask systemd-rfkill.service systemd-rfkill.socket ;;
+    esac
+  fi
   return 0
 }
 
 base_initramfs() {
-  step "initramfs"
   local hooks="base systemd autodetect microcode modconf kms keyboard sd-vconsole block"
   [[ "$REIMU_ENCRYPT" == yes ]] && hooks+=" sd-encrypt"
   hooks+=" filesystems fsck"
   local modules=""
   [[ "$REIMU_FS" == btrfs ]] && modules="btrfs"
   edit_file "s/^HOOKS=.*/HOOKS=($hooks)/; s/^MODULES=.*/MODULES=($modules)/" /etc/mkinitcpio.conf
-  chr mkinitcpio -P
+  RUN_TITLE="Building the initramfs" chr mkinitcpio -P
 }

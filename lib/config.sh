@@ -13,7 +13,7 @@ CONFIG_KEYS=(
   REIMU_PART_BOOT REIMU_PART_ROOT REIMU_PART_HOME REIMU_PART_SWAP REIMU_FORMAT_HOME
   REIMU_BOOTLOADER REIMU_SNAPSHOTS
   REIMU_USER REIMU_USER_SHELL REIMU_SUDO REIMU_ROOT_LOGIN
-  REIMU_NETWORK REIMU_BLUETOOTH REIMU_PRINTING REIMU_FIREWALL REIMU_SSH REIMU_MULTILIB
+  REIMU_NETWORK REIMU_BLUETOOTH REIMU_PRINTING REIMU_FIREWALL REIMU_SSH REIMU_MULTILIB REIMU_POWER
   REIMU_DESKTOP REIMU_DISPLAY_MANAGER REIMU_XFCE_WIN2K REIMU_GPU
   REIMU_AUR REIMU_CATALOG REIMU_EXTRA_PACKAGES REIMU_SERVICES
 )
@@ -46,6 +46,7 @@ config_defaults() {
   : "${REIMU_FIREWALL:=no}"           # no | firewalld | ufw
   : "${REIMU_SSH:=no}"
   : "${REIMU_MULTILIB:=no}"
+  : "${REIMU_POWER:=ppd}"             # ppd | tlp | none (laptops)
   : "${REIMU_DESKTOP:=none}"
   : "${REIMU_DISPLAY_MANAGER:=auto}"
   : "${REIMU_XFCE_WIN2K:=no}"
@@ -97,7 +98,8 @@ config_load_any() {
 }
 
 config_save() {
-  local file="$1" key val
+  local file="$1" quiet="${2:-}" key val
+  mkdir -p "$(dirname "$file")"
   {
     printf '# Reimu %s configuration · %(%Y-%m-%d %H:%M)T\n' "$REIMU_VERSION" -1
     printf '# Passwords are never stored here. Use: reimu --config %s\n\n' "$(basename "$file")"
@@ -107,7 +109,7 @@ config_save() {
       printf '%s="%s"\n' "$key" "$val"
     done
   } > "$file"
-  ok "Configuration saved to $file"
+  [[ -n "$quiet" ]] || ok "Configuration saved to $file"
 }
 
 # Validate everything before touching the disk. Returns 1 with a list of problems.
@@ -138,7 +140,7 @@ config_validate() {
   [[ "$REIMU_SNAPSHOTS" == yes && "$REIMU_FS" != btrfs ]] && REIMU_SNAPSHOTS=no
   [[ -n "$REIMU_KERNELS" ]] || problems+=("At least one kernel is required.")
   case "$REIMU_DESKTOP" in
-    none|gnome|plasma|xfce|cinnamon|mate|budgie|lxqt|hyprland|sway|niri|i3) ;;
+    none|gnome|plasma|xfce|cinnamon|mate|budgie|lxqt|cosmic|deepin|hyprland|sway|niri|i3) ;;
     *) problems+=("Unknown desktop '$REIMU_DESKTOP'.") ;;
   esac
   if (( ${#problems[@]} )); then

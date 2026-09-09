@@ -22,10 +22,9 @@ sys_set_password() {
 }
 
 sys_users() {
-  step "Users"
   local shell="/bin/bash"
   case "$REIMU_USER_SHELL" in zsh) shell="/usr/bin/zsh" ;; fish) shell="/usr/bin/fish" ;; esac
-  chr useradd -m -G wheel,audio,video,storage,optical,input -s "$shell" "$REIMU_USER"
+  chr_sh "id -u $REIMU_USER >/dev/null 2>&1 || useradd -m -G wheel,audio,video,storage,optical,input -s $shell $REIMU_USER"
   sys_set_password "$REIMU_USER" "$USER_PASSWORD"
   if [[ "$REIMU_ROOT_LOGIN" == yes ]]; then
     sys_set_password root "$ROOT_PASSWORD"
@@ -65,7 +64,6 @@ EOF
 }
 
 sys_network() {
-  step "Network"
   case "$REIMU_NETWORK" in
     networkmanager)
       chr_enable NetworkManager.service
@@ -86,7 +84,6 @@ Name=en* eth*
 [Network]
 DHCP=yes
 EOF
-      chr ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
       ;;
     systemd-networkd)
       chr_enable systemd-networkd.service systemd-resolved.service
@@ -96,7 +93,6 @@ Name=en* eth*
 [Network]
 DHCP=yes
 EOF
-      chr ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
       ;;
   esac
 
@@ -110,7 +106,7 @@ EOF
 
   case "$REIMU_FIREWALL" in
     firewalld) chr_pkg firewalld; chr_enable firewalld.service ;;
-    ufw) chr_pkg ufw; chr_enable ufw.service; chr_sh "ufw default deny incoming && ufw default allow outgoing && ufw --force enable" ;;
+    ufw) chr_pkg ufw; chr_enable ufw.service; edit_file 's/^ENABLED=no/ENABLED=yes/' /etc/ufw/ufw.conf ;;
   esac
 }
 
@@ -123,7 +119,6 @@ sys_bluetooth_wanted() {
 }
 
 sys_extras() {
-  step "Services"
   if sys_bluetooth_wanted; then
     chr_pkg bluez bluez-utils
     chr_enable bluetooth.service
@@ -141,7 +136,7 @@ sys_extras() {
 # snapper on btrfs: the @snapshots subvolume must be handed over to snapper.
 sys_snapshots() {
   [[ "$REIMU_SNAPSHOTS" == yes ]] || return 0
-  step "Snapshots"
+  if [[ -e "$REIMU_MNT/etc/snapper/configs/root" ]]; then ui_note "snapper is already configured."; return 0; fi
   run umount "$REIMU_MNT/.snapshots"
   run rm -rf "$REIMU_MNT/.snapshots"
   chr snapper --no-dbus -c root create-config /

@@ -45,10 +45,10 @@ sw_sudo_nopass_off() { run rm -f "$REIMU_MNT/etc/sudoers.d/99-reimu-build"; }
 
 sw_aur_helper() {
   [[ "$REIMU_AUR" == none ]] && return 0
-  step "AUR helper: $REIMU_AUR"
+  if [[ -x "$REIMU_MNT/usr/bin/$REIMU_AUR" ]]; then ui_note "$REIMU_AUR is already installed."; return 0; fi
   local pkg="$REIMU_AUR-bin"
   sw_sudo_nopass_on
-  chr_user "$REIMU_USER" "cd /tmp && rm -rf $pkg && git clone --depth 1 https://aur.archlinux.org/$pkg.git && cd $pkg && makepkg -si --noconfirm --needed" \
+  RUN_TITLE="Building $REIMU_AUR from the AUR" chr_user_net "$REIMU_USER" "cd /tmp && rm -rf $pkg && git clone --depth 1 https://aur.archlinux.org/$pkg.git && cd $pkg && makepkg -si --noconfirm --needed" \
     || warn "Could not build $REIMU_AUR; AUR packages will be skipped."
   sw_sudo_nopass_off
   if [[ "$REIMU_AUR" == paru ]]; then
@@ -68,7 +68,6 @@ EOF
 sw_install_bundles() {
   sw_read_bundles
   (( ${#SW_REPO[@]} + ${#SW_AUR[@]} )) || return 0
-  step "Software bundles: ${REIMU_CATALOG:-extras}"
   if (( ${#SW_REPO[@]} )); then
     msg "${#SW_REPO[@]} packages from the repositories"
     chr_pkg "${SW_REPO[@]}"
@@ -79,14 +78,14 @@ sw_install_bundles() {
     else
       msg "${#SW_AUR[@]} packages from the AUR"
       sw_sudo_nopass_on
-      chr_user "$REIMU_USER" "$REIMU_AUR -S --noconfirm --needed --skipreview ${SW_AUR[*]}" \
+      RUN_TITLE="Building ${#SW_AUR[@]} AUR packages" chr_user_net "$REIMU_USER" "$REIMU_AUR -S --noconfirm --needed --skipreview ${SW_AUR[*]}" \
         || warn "Some AUR packages failed to build; see the log."
       sw_sudo_nopass_off
     fi
   fi
   local g e
   for g in "${SW_GROUPS[@]}"; do chr usermod -aG "$g" "$REIMU_USER"; done
-  for e in "${SW_ENV[@]}"; do append_file /etc/environment "$e"; done
+  for e in "${SW_ENV[@]}"; do grep -qsxF "$e" "$REIMU_MNT/etc/environment" || append_file /etc/environment "$e"; done
   (( ${#SW_SVC[@]} )) && chr_enable "${SW_SVC[@]}"
   return 0
 }

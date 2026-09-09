@@ -19,7 +19,6 @@ BTRFS_OPTS="noatime,compress=zstd:3,space_cache=v2,discard=async"
 BTRFS_SUBVOLS=("@:/" "@home:/home" "@log:/var/log" "@pkg:/var/cache/pacman/pkg" "@snapshots:/.snapshots")
 
 disk_prepare() {
-  step "Disk"
   if [[ "$REIMU_DISK_MODE" == auto ]]; then
     disk_auto_partition
   else
@@ -28,11 +27,14 @@ disk_prepare() {
   fi
   disk_encrypt
   disk_format
-  disk_mount
+  disk_create_subvolumes
+  disk_mount_existing
+  state_save
 }
 
 disk_auto_partition() {
   local disk="$REIMU_DISK" n=1
+  step "Disk"
   msg "Wiping $disk and creating a new GPT layout"
   (( DRY_RUN )) || { swapoff -a 2>/dev/null; umount -R "$REIMU_MNT" 2>/dev/null || true; }
   run wipefs -af "$disk"
@@ -90,21 +92,29 @@ disk_format() {
   ROOT_UUID="$(blkid -s UUID -o value "$ROOT_DEV" 2>/dev/null || echo ROOT-UUID)"
 }
 
-disk_mount() {
+disk_create_subvolumes() {
+  [[ "$REIMU_FS" == btrfs ]] || return 0
+  msg "Creating btrfs subvolumes"
+  run mount "$ROOT_DEV" "$REIMU_MNT"
+  local sv name
+  for sv in "${BTRFS_SUBVOLS[@]}"; do
+    name="${sv%%:*}"
+    [[ "$name" == @home && -n "$PART_HOME" ]] && continue
+    [[ "$name" == @snapshots && "$REIMU_SNAPSHOTS" != yes ]] && continue
+    run btrfs subvolume create "$REIMU_MNT/$name"
+  done
+  [[ "$REIMU_SWAP" == file ]] && run btrfs subvolume create "$REIMU_MNT/@swap"
+  run umount "$REIMU_MNT"
+  return 0
+}
+
+# Mount an already formatted layout (fresh install or resume).
+disk_mount_existing() {
   msg "Mounting at $REIMU_MNT"
+  [[ -n "$ROOT_DEV" ]] || ROOT_DEV="$PART_ROOT"
   if [[ "$REIMU_FS" == btrfs ]]; then
-    run mount "$ROOT_DEV" "$REIMU_MNT"
-    local sv name
-    for sv in "${BTRFS_SUBVOLS[@]}"; do
-      name="${sv%%:*}"
-      [[ "$name" == @home && -n "$PART_HOME" ]] && continue
-      [[ "$name" == @snapshots && "$REIMU_SNAPSHOTS" != yes ]] && continue
-      run btrfs subvolume create "$REIMU_MNT/$name"
-    done
-    [[ "$REIMU_SWAP" == file ]] && run btrfs subvolume create "$REIMU_MNT/@swap"
-    run umount "$REIMU_MNT"
     run mount -o "$BTRFS_OPTS,subvol=@" "$ROOT_DEV" "$REIMU_MNT"
-    local target
+    local sv name target
     for sv in "${BTRFS_SUBVOLS[@]}"; do
       name="${sv%%:*}"; target="${sv#*:}"
       [[ "$name" == @ ]] && continue
@@ -122,22 +132,28 @@ disk_mount() {
     run mount --mkdir -o noatime "$PART_HOME" "$REIMU_MNT/home"
   fi
   run mount --mkdir -o "umask=0077" "$PART_BOOT" "$REIMU_MNT/boot"
-  [[ -n "$PART_SWAP" ]] && run swapon "$PART_SWAP"
+  [[ -n "$PART_SWAP" ]] && try swapon "$PART_SWAP"
+  [[ "$REIMU_SWAP" == file && -e "$REIMU_MNT/swap/swapfile" ]] && try swapon "$REIMU_MNT/swap/swapfile"
+  [[ "$REIMU_SWAP" == file && -e "$REIMU_MNT/swapfile" ]] && try swapon "$REIMU_MNT/swapfile"
   return 0
 }
 
 # Swap file, created after pacstrap so the tools exist on the target.
 disk_swapfile() {
   [[ "$REIMU_SWAP" == file ]] || return 0
-  msg "Creating a ${REIMU_SWAP_SIZE} GiB swap file"
-  if [[ "$REIMU_FS" == btrfs ]]; then
-    run btrfs filesystem mkswapfile --size "${REIMU_SWAP_SIZE}g" --uuid clear "$REIMU_MNT/swap/swapfile"
-    run swapon "$REIMU_MNT/swap/swapfile"
-    append_file /etc/fstab "/swap/swapfile none swap defaults 0 0"
-  else
-    run mkswap -U clear --size "${REIMU_SWAP_SIZE}G" --file "$REIMU_MNT/swapfile"
-    run swapon "$REIMU_MNT/swapfile"
-    append_file /etc/fstab "/swapfile none swap defaults 0 0"
+  local path="/swapfile"
+  [[ "$REIMU_FS" == btrfs ]] && path="/swap/swapfile"
+  if [[ ! -e "$REIMU_MNT$path" ]]; then
+    msg "Creating a ${REIMU_SWAP_SIZE} GiB swap file"
+    if [[ "$REIMU_FS" == btrfs ]]; then
+      run btrfs filesystem mkswapfile --size "${REIMU_SWAP_SIZE}g" --uuid clear "$REIMU_MNT$path"
+    else
+      run mkswap -U clear --size "${REIMU_SWAP_SIZE}G" --file "$REIMU_MNT$path"
+    fi
+    try swapon "$REIMU_MNT$path"
+  fi
+  if (( DRY_RUN )) || ! grep -qs "^$path " "$REIMU_MNT/etc/fstab"; then
+    append_file /etc/fstab "$path none swap defaults 0 0"
   fi
 }
 
