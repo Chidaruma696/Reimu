@@ -148,6 +148,7 @@ ask_text() {
     warn "A value is required."
   done
   _out="$ans"
+  log "answer $1 = $ans"
   (( UI_GUM )) && printf '  %s%s: %s%s\n' "$C_DIM" "$prompt" "$ans" "$C_RESET"
   return 0
 }
@@ -165,6 +166,7 @@ ask_optional() {
   fi
   [[ "$ans" == "-" ]] && ans=""
   _out="$ans"
+  log "answer $1 = $ans"
   return 0
 }
 
@@ -243,6 +245,7 @@ ask_choice() {
     ans="$(gum choose --header "$prompt" --height "$h" --label-delimiter $'\t' ${deflabel:+--selected "$deflabel"} "${opts[@]}")" || ans="$def"
     [[ -z "$ans" ]] && ans="$def"
     _out="$ans"
+    log "answer $1 = $ans"
     for i in "${!keys[@]}"; do [[ "${keys[$i]}" == "$ans" ]] && printf '  %s%s: %s%s\n' "$C_DIM" "$prompt" "${labels[$i]}" "$C_RESET"; done
     return 0
   fi
@@ -308,6 +311,7 @@ ask_multi() {
     local -a result=()
     for i in "${!keys[@]}"; do (( on[i] )) && result+=("${keys[$i]}"); done
     _out="${result[*]}"
+    log "answer $1 = ${_out}"
     printf '  %s%s: %s%s\n' "$C_DIM" "$prompt" "${_out:-none}" "$C_RESET"
     return 0
   fi
@@ -399,6 +403,7 @@ ask_filter() {
     ans="$(printf '%s\n' "${ordered[@]}" | gum filter --header "$prompt  ·  type to search, enter picks" --height 12 --fuzzy)" || ans="$def"
     [[ -z "$ans" ]] && ans="$def"
     _out="$ans"
+    log "answer $var = $ans"
     printf '  %s%s: %s%s\n' "$C_DIM" "$prompt" "$ans" "$C_RESET"
     return 0
   fi
