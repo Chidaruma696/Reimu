@@ -260,9 +260,9 @@ ask_choice() {
   done
   while true; do
     read -r -p "$(printf '   %s>%s ' "$C_CYAN" "$C_RESET")" ans
-    if [[ -z "$ans" && -n "$def" ]]; then _out="$def"; return 0; fi
+    if [[ -z "$ans" && -n "$def" ]]; then _out="$def"; log "answer $1 = $def"; return 0; fi
     if [[ "$ans" =~ ^[0-9]+$ ]] && (( ans >= 1 && ans <= ${#keys[@]} )); then
-      _out="${keys[$((ans-1))]}"; return 0
+      _out="${keys[$((ans-1))]}"; log "answer $1 = ${_out}"; return 0
     fi
     for i in "${!keys[@]}"; do
       if [[ "${keys[$i]}" == "$ans" ]]; then _out="$ans"; return 0; fi
@@ -343,6 +343,7 @@ ask_multi() {
   local -a result=()
   for i in "${!keys[@]}"; do (( on[i] )) && result+=("${keys[$i]}"); done
   _out="${result[*]}"
+  log "answer $1 = ${_out}"
   return 0
 }
 
