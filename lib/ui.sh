@@ -53,6 +53,8 @@ ui_init() {
       fi
     fi
   fi
+  local cols; cols="$(tput cols 2>/dev/null || echo 80)"
+  (( cols - 4 < UI_WIDTH )) && UI_WIDTH=$(( cols - 4 ))
   if has gum; then
     UI_GUM=1; ui_theme
   else
@@ -284,17 +286,27 @@ ask_multi() {
   done
 
   if (( UI_GUM )); then
-    local -a opts=() sel=()
-    local selected=""
-    for i in "${!keys[@]}"; do
-      opts+=("${shown[$i]}"$'\t'"${keys[$i]}")
-      (( on[i] )) && selected+="${selected:+,}${shown[$i]}"
+    # A checkbox list: Enter marks or unmarks the line under the cursor, "Done" finishes.
+    local -a opts=()
+    local pick cursor="" count h
+    while true; do
+      opts=(); count=0
+      for i in "${!keys[@]}"; do
+        if (( on[i] )); then opts+=("[x] ${shown[$i]}"$'\t'"${keys[$i]}"); count=$((count+1)); else opts+=("[ ] ${shown[$i]}"$'\t'"${keys[$i]}"); fi
+      done
+      opts+=("✔ Done · continue with $count selected"$'\t'"__done__")
+      h=${#opts[@]}; (( h > 16 )) && h=16
+      pick="$(gum choose --header "$prompt  ·  enter marks or unmarks, pick Done when finished" --height "$h" --label-delimiter $'\t' ${cursor:+--selected "$cursor"} "${opts[@]}")" || pick="__done__"
+      [[ "$pick" == "__done__" || -z "$pick" ]] && break
+      for i in "${!keys[@]}"; do
+        if [[ "${keys[$i]}" == "$pick" ]]; then
+          on[i]=$(( 1 - on[i] ))
+          cursor="$( (( on[i] )) && printf '[x] %s' "${shown[$i]}" || printf '[ ] %s' "${shown[$i]}" )"
+        fi
+      done
     done
-    local h=${#keys[@]}; (( h > 14 )) && h=14
-    mapfile -t sel < <(gum choose --no-limit --header "$prompt  ·  space marks, enter accepts" --height "$h" --label-delimiter $'\t' ${selected:+--selected "$selected"} "${opts[@]}") || sel=()
-    # Keep item order.
     local -a result=()
-    for i in "${!keys[@]}"; do has_word "${sel[*]}" "${keys[$i]}" && result+=("${keys[$i]}"); done
+    for i in "${!keys[@]}"; do (( on[i] )) && result+=("${keys[$i]}"); done
     _out="${result[*]}"
     printf '  %s%s: %s%s\n' "$C_DIM" "$prompt" "${_out:-none}" "$C_RESET"
     return 0
@@ -380,7 +392,11 @@ ask_filter() {
   mapfile -t lines < <("$@")
   _ui_guard "$var"
   if (( UI_GUM )) && (( ${#lines[@]} )); then
-    ans="$(printf '%s\n' "${lines[@]}" | gum filter --header "$prompt" --height 12 --fuzzy ${def:+--selected "$def"})" || ans="$def"
+    local -a ordered=()
+    local l
+    [[ -n "$def" ]] && ordered+=("$def")
+    for l in "${lines[@]}"; do [[ "$l" == "$def" ]] || ordered+=("$l"); done
+    ans="$(printf '%s\n' "${ordered[@]}" | gum filter --header "$prompt  ·  type to search, enter picks" --height 12 --fuzzy)" || ans="$def"
     [[ -z "$ans" ]] && ans="$def"
     _out="$ans"
     printf '  %s%s: %s%s\n' "$C_DIM" "$prompt" "$ans" "$C_RESET"
