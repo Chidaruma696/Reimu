@@ -1,0 +1,33 @@
+# Development: editors, containers, languages, terminal tools
+git
+github-cli
+lazygit
+neovim
+code                    # VS Code, open-source build (AUR has visual-studio-code-bin)
+docker
+docker-compose
+svc:docker.service
+group:docker
+python
+python-pip
+python-pipx
+nodejs
+npm
+rustup
+go
+jdk-openjdk
+gcc
+clang
+cmake
+make
+ninja
+gdb
+shellcheck
+tmux
+jq
+ripgrep
+fd
+bat
+eza
+fzf
+zoxide

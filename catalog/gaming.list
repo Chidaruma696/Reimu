@@ -1,0 +1,11 @@
+# Gaming: Steam, Lutris, Wine, GameMode, MangoHud (enable multilib)
+multilib:steam
+lutris
+multilib:wine-staging
+winetricks
+gamemode
+multilib:lib32-gamemode
+mangohud
+multilib:lib32-mangohud
+aur:protonup-qt
+aur:heroic-games-launcher-bin

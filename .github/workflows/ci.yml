@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax
+        run: |
+          bash -n reimu
+          for f in lib/*.sh; do bash -n "$f"; done
+
+      - name: ShellCheck
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck -x -s bash reimu lib/*.sh
+
+      - name: Dry run (UEFI, systemd-boot, btrfs)
+        env:
+          REIMU_FIRMWARE: uefi
+          REIMU_USER_PASSWORD: dry
+        run: sudo -E ./reimu --config reimu.conf.example --dry-run --yes
+
+      - name: Dry run (BIOS, GRUB, ext4, LUKS)
+        env:
+          REIMU_FIRMWARE: bios
+          REIMU_USER_PASSWORD: dry
+          REIMU_LUKS_PASSWORD: dry
+        run: |
+          sed -e 's/^REIMU_BOOTLOADER=.*/REIMU_BOOTLOADER="grub"/' \
+              -e 's/^REIMU_FS=.*/REIMU_FS="ext4"/' \
+              -e 's/^REIMU_ENCRYPT=.*/REIMU_ENCRYPT="yes"/' \
+              -e 's/^REIMU_SWAP=.*/REIMU_SWAP="file"/' \
+              -e 's/^REIMU_SWAP_SIZE=.*/REIMU_SWAP_SIZE="8"/' \
+              -e 's/^REIMU_DESKTOP=.*/REIMU_DESKTOP="plasma"/' \
+              reimu.conf.example > /tmp/bios.conf
+          sudo -E ./reimu --config /tmp/bios.conf --dry-run --yes
