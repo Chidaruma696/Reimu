@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # Reimu · core: logging, command execution, dry-run, safety helpers.
 
-REIMU_VERSION="0.5.3"
+REIMU_VERSION="0.5.4"
 REIMU_RUN_DIR="${REIMU_RUN_DIR:-/run/reimu}"
 REIMU_LOG="${REIMU_LOG:-/var/log/reimu.log}"
 REIMU_MNT="${REIMU_MNT:-/mnt}"
@@ -61,25 +61,32 @@ run() {
     return 0
   fi
   local rc title="${RUN_TITLE:-}"
-  if (( UI_GUM )); then
-    [[ -n "$title" ]] || title="$(run_title "$@")"
-    # shellcheck disable=SC2016
-    gum spin --spinner dot --title "$title" -- bash -c 'exec "$@" >>"$0" 2>&1' "$REIMU_LOG" "$@"
+  [[ -n "$title" ]] || title="$(run_title "$@")"
+  if [[ -t 1 ]]; then
+    # Pure-bash progress line: the command writes to the log, we show its last line.
+    # (gum spin used to do this and died on long steps; see the 0.5.4 notes.)
+    "$@" >> "$REIMU_LOG" 2>&1 &
+    local pid=$! frames='|/-' i=0 last cols
+    cols="$(tput cols 2>/dev/null || echo 80)"
+    while kill -0 "$pid" 2>/dev/null; do
+      last="$(tail -n 1 "$REIMU_LOG" 2>/dev/null | tr -d '\r' | cut -c1-$(( cols > 40 ? cols - 30 : 20 )))"
+      printf '\r\033[K  %s%s%s %s %s%s%s' "$C_MAGENTA" "${frames:i%3:1}" "$C_RESET" "$title" "$C_DIM" "$last" "$C_RESET"
+      i=$((i+1))
+      sleep 0.5
+    done
+    wait "$pid"; rc=$?
+    printf '\r\033[K'
+  else
+    "$@" >> "$REIMU_LOG" 2>&1
     rc=$?
-    if (( rc != 0 )); then
-      err "Failed (exit $rc): $*"
-      printf '%s' "$C_DIM"; tail -n 15 "$REIMU_LOG" | sed 's/^/    │ /'; printf '%s\n' "$C_RESET"
-      run_recover "$@"; return $?
-    fi
-    printf '  %s✔ %s%s\n' "$C_DIM" "$title" "$C_RESET"
-    return 0
   fi
-  "$@" 2>&1 | tee -a "$REIMU_LOG"
-  rc=${PIPESTATUS[0]}
   if (( rc != 0 )); then
-    err "Command failed (exit $rc): $*"
+    err "Failed (exit $rc): $*"
+    printf '%s' "$C_DIM"; tail -n 15 "$REIMU_LOG" | sed 's/^/    | /'; printf '%s\n' "$C_RESET"
     run_recover "$@"; return $?
   fi
+  printf '  %s[ok]%s %s\n' "$C_GREEN" "$C_RESET" "$title"
+  return 0
 }
 
 # A command failed. Offer to retry just that command, skip it, or look around,
@@ -92,13 +99,25 @@ run_recover() {
   local what
   export REIMU_INTERACTIVE=1
   while true; do
+    UI_BACK=0
     ask_choice what "That step failed. What now?" retry \
       "retry|Retry|Run the same command again (after a network cut, for example)" \
       "skip|Skip|Continue without it · the rest of the installation goes on" \
       "shell|Shell|Open a shell to look around · type exit to come back here" \
       "abort|Abort|Stop the installation (it can be resumed later with --resume)"
+    if (( UI_BACK )); then
+      # The prompt itself failed or was escaped: never loop on a broken interface.
+      if (( UI_GUM )); then
+        UI_GUM=0; UI_BACK=0
+        warn "The interface tool failed; switching to plain prompts."
+        continue
+      fi
+      what=abort
+    fi
     case "$what" in
-      retry) RUN_NO_RECOVER=1 run "$@" && return 0; RUN_NO_RECOVER=0 ;;
+      retry)
+        if RUN_NO_RECOVER=1 run "$@"; then return 0; fi
+        warn "Still failing. Pick again." ;;
       skip) warn "Skipped: $*"; return 0 ;;
       shell) printf '%sType exit to return to Reimu.%s\n' "$C_YELLOW" "$C_RESET"; bash -i || true ;;
       abort) die "Aborted by the user. Resume later with: reimu --resume" ;;
@@ -111,11 +130,12 @@ net_wait() {
   (( DRY_RUN )) && return 0
   network_ok && return 0
   warn "No internet connection. Waiting for it to come back… (Ctrl+C aborts)"
-  if (( UI_GUM )); then
-    gum spin --spinner globe --title "Waiting for the network…" -- bash -c 'until curl -fsS --max-time 6 -o /dev/null https://archlinux.org; do sleep 5; done'
-  else
-    until network_ok; do sleep 5; done
-  fi
+  local frames='|/-' i=0
+  until network_ok; do
+    printf '\r\033[K  %s%s%s Waiting for the network…' "$C_MAGENTA" "${frames:i%3:1}" "$C_RESET"
+    i=$((i+1)); sleep 3
+  done
+  printf '\r\033[K'
   ok "Network is back."
 }
 

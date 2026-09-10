@@ -260,7 +260,7 @@ ask_choice() {
     local -a opts=()
     for i in "${!keys[@]}"; do opts+=("${shown[$i]}"$'\t'"${keys[$i]}"); done
     local h=${#keys[@]}; (( h > 16 )) && h=16
-    ans="$(gum choose --header "$prompt  ·  Enter picks · Esc goes back" --height "$h" --label-delimiter $'\t' ${deflabel:+--selected "$deflabel"} "${opts[@]}")" || { ans="$def"; UI_BACK=1; }
+    ans="$(gum choose --header "$prompt  ·  Enter picks · Esc goes back" --height "$h" --label-delimiter $'\t' ${deflabel:+--selected "$deflabel"} "${opts[@]}")" || { ans="$def"; UI_BACK=1; log "gum choose exited $? for: $prompt"; }
     [[ -z "$ans" ]] && ans="$def"
     _out="$ans"
     log "answer $1 = $ans"
