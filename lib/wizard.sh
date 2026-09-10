@@ -453,11 +453,11 @@ wiz_progress() {
     wiz_skip "$id" && [[ "$id" != "$current" ]] && continue
     if [[ "$group" != "$last_group" ]]; then out+=$'\n'"  $group"$'\n'; last_group="$group"; fi
     if [[ "$id" == "$current" ]]; then
-      out+="  ▶ $label"$'\n'
+      out+="  [>] $label"$'\n'
     elif (( i < done_upto )); then
-      out+="  ✔ $label: $(wiz_value "$id")"$'\n'
+      out+="  [x] $label: $(wiz_value "$id")"$'\n'
     else
-      out+="  ○ $label"$'\n'
+      out+="  [ ] $label"$'\n'
     fi
   done
   [[ -z "$current" ]] && out+=$'\n'"  Esc in a question goes back one."$'\n'
