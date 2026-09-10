@@ -121,21 +121,21 @@ SANAE_URL="https://github.com/Chidaruma696/Sanae/releases/latest/download/sanae-
 sw_sanae() {
   [[ "$REIMU_SANAE" == yes ]] || return 0
   msg "Sanae"
-  chr_pkg expac pacman-contrib archlinux-appstream-data
+  chr_pkg expac pacman-contrib archlinux-appstream-data wget
   if (( DRY_RUN )); then
-    printf '%s  $ curl -fsSL %s -o %s/usr/local/bin/sanae && chmod 755 …%s\n' "$C_DIM" "$SANAE_URL" "$REIMU_MNT" "$C_RESET"
+    printf '%s  $ wget -c --tries=5 -O %s/usr/local/bin/sanae %s && chmod 755 …%s\n' "$C_DIM" "$REIMU_MNT" "$SANAE_URL" "$C_RESET"
     return 0
   fi
   net_wait
   local tmp="$REIMU_MNT/usr/local/bin/sanae.part"
   mkdir -p "$REIMU_MNT/usr/local/bin"
-  if RUN_TITLE="Downloading Sanae" run_net curl -fsSL --max-time 120 "$SANAE_URL" -o "$tmp"; then
+  if RUN_TITLE="Downloading Sanae" run_net fetch "$SANAE_URL" "$tmp" && [[ "$(head -c 4 "$tmp" 2>/dev/null)" == $'\x7fELF' ]]; then
     mv -f "$tmp" "$REIMU_MNT/usr/local/bin/sanae"
     chmod 755 "$REIMU_MNT/usr/local/bin/sanae"
     ok "Sanae installed: run 'sanae' after the first login."
   else
     rm -f "$tmp"
-    warn "Could not download Sanae; install it later from https://github.com/Chidaruma696/Sanae"
+    warn "Could not download Sanae; install it later from github.com/Chidaruma696/Sanae."
   fi
   return 0
 }

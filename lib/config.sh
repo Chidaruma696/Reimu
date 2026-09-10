@@ -106,7 +106,7 @@ config_load_any() {
   local src="$1"
   if [[ "$src" =~ ^https?:// ]]; then
     local tmp; tmp="$(mktemp)"
-    curl -fsSL "$src" -o "$tmp" || die "Could not download $src"
+    fetch "$src" "$tmp" || die "Could not download $src"
     config_load "$tmp"
   else
     config_load "$src"
