@@ -11,7 +11,7 @@ declare -A T=()
 REIMU_LANG="${REIMU_LANG:-en}"
 
 # Languages Reimu ships with: code|Native name.
-I18N_LANGS=("en|English" "es|Español")
+I18N_LANGS=("en|English" "es|Español" "de|Deutsch" "fr|Français" "it|Italiano" "pt|Português" "ja|日本語" "ru|Русский")
 
 t() {
   local s="$1"
@@ -42,8 +42,11 @@ i18n_load() {
 
 # Pick the language from the environment when nothing was chosen yet.
 i18n_guess() {
-  case "${LANG:-}${LC_ALL:-}" in
-    es*|*:es*) printf 'es' ;;
-    *) printf 'en' ;;
-  esac
+  local env="${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}" l
+  for l in "${I18N_LANGS[@]}"; do
+    l="${l%%|*}"
+    [[ "$l" == en ]] && continue
+    if [[ "$env" == "$l"* ]]; then printf '%s' "$l"; return 0; fi
+  done
+  printf 'en'
 }

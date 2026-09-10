@@ -8,7 +8,7 @@
 #   reimu --save FILE           after the wizard, save the configuration and exit
 #   reimu --resume              continue an installation that was interrupted
 #   reimu --no-tmux             single pane, no live log on the side
-#   reimu --lang es             interface language (en, es)
+#   reimu --lang es             interface language (en, es, de, fr, it, pt, ja, ru)
 set -Eeuo pipefail
 
 REIMU_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"

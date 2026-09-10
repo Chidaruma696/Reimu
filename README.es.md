@@ -82,7 +82,7 @@ Everything Reimu will do · pick a line to change it
 
 Cuando un comando falla durante la instalación (un mirror que se cayó, un paquete que cambió de nombre), Reimu no tira todo por la borda: muestra las últimas líneas del log y pregunta si reintentar ese comando, omitirlo, abrir una shell para mirar, o abortar. Los conjuntos de paquetes que fallan en bloque se reintentan uno por uno, y lo que aun así no se pudo instalar se lista al final.
 
-La interfaz está en inglés por ahora; la versión en español está en la hoja de ruta.
+La interfaz está en español, inglés, alemán, francés, italiano, portugués, japonés y ruso: la primera pregunta elige el idioma (o `--lang ja`), y por defecto sigue `LANG`. Los textos en japonés y ruso se escribieron con cuidado pero no por hablantes nativos: las correcciones son bienvenidas. Añadir un idioma es un archivo, `lib/lang/<código>.sh`, registrado en `lib/i18n.sh`.
 
 ### Desde un archivo de configuración
 
@@ -182,7 +182,6 @@ La simulación funciona en cualquier máquina con Bash 5 y muestra los comandos 
 - Hibernación con partición o archivo de swap (`resume=` en la línea del kernel).
 - Arranque desde snapshots con Limine (limine-snapper-sync).
 - LVM sobre LUKS y esquemas manuales conscientes del arranque dual.
-- Interfaz en español y japonés.
 
 <br/>
 
