@@ -116,7 +116,7 @@ See [`reimu.conf.example`](reimu.conf.example) for every key with its options. U
 | **AUR** | paru or yay, built inside the chroot as your user. |
 | **Bundles** | development, office, internet, multimedia, graphics, gaming, utilities, fonts, japanese (fcitx5 + mozc), virtualization. The wizard shows exactly which packages each one installs before you pick. Plain text lists in [`catalog/`](catalog), easy to edit. |
 | **Housekeeping** | Parallel downloads and color in pacman, `reflector.timer`, `paccache.timer`, `fstrim.timer`, `systemd-timesyncd`, power-profiles-daemon on laptops. |
-| **XFCE extra** | Optionally fetches [Win2k Undead](https://github.com/Chidaruma696/Win2k_undead) into your home for the Windows 2000 look. |
+| **Themes (XFCE)** | Greybird, Arc, Materia, Orchis, Flat Remix, Skeuos (the Kali look), Dracula, Nordic, Catppuccin, in dark or light, with Papirus, Tela, Flat Remix, elementary, Breeze or Arc icons. Installed and set as your user's default, so the first login already looks like that. |
 
 <br/>
 

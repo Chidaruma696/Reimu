@@ -254,7 +254,7 @@ q_desktop() {
     "i3|i3|Tiling X11 classic" \
     "none|None|Terminal only"
   if [[ "$REIMU_DESKTOP" == none ]]; then
-    REIMU_DISPLAY_MANAGER=none; REIMU_XFCE_WIN2K=no
+    REIMU_DISPLAY_MANAGER=none
   else
     ui_box "What $REIMU_DESKTOP installs" "$(desktop_packages "$REIMU_DESKTOP" | tr ' ' '\n' | paste -sd ' ')
 plus, with every desktop: ${DESKTOP_COMMON[*]}" 240
@@ -270,10 +270,35 @@ q_dm() {
     "lightdm|LightDM|Light and classic" "ly|ly|Text mode" "none|None|Start from a TTY"
 }
 
-q_win2k() {
-  [[ "$REIMU_DESKTOP" == xfce ]] || { REIMU_XFCE_WIN2K=no; return 0; }
-  ask_yesno "Fetch the Win2k Undead theme (Windows 2000 look for XFCE)?" "$( [[ "$REIMU_XFCE_WIN2K" == yes ]] && echo y || echo n )" \
-    && REIMU_XFCE_WIN2K=yes || REIMU_XFCE_WIN2K=no
+q_theme() {
+  [[ "$REIMU_DESKTOP" == xfce ]] || { ui_note "Themes are applied automatically for XFCE only (for now)."; return 0; }
+  ui_help "$(help_theme)"
+  ask_choice REIMU_THEME "Theme" "$REIMU_THEME" \
+    "greybird|Greybird|XFCE's classic · light or dark · AUR" \
+    "arc|Arc|Flat with transparency · the popular one · AUR" \
+    "materia|Materia|Material Design · official repo" \
+    "orchis|Orchis|Rounded and modern · official repo" \
+    "flat-remix|Flat Remix|Flat and colorful · AUR" \
+    "skeuos|Skeuos|Kali Linux look · AUR" \
+    "dracula|Dracula|Dark purple · AUR" \
+    "nordic|Nordic|Nord palette · AUR" \
+    "catppuccin|Catppuccin Mocha|Pastel dark · AUR" \
+    "default|Default|Adwaita · nothing extra"
+  ask_choice REIMU_THEME_VARIANT "Variant" "$REIMU_THEME_VARIANT" "dark|Dark|" "light|Light|"
+  ask_choice REIMU_ICONS "Icons" "$REIMU_ICONS" \
+    "papirus|Papirus|The most popular · official repo" \
+    "tela|Tela|Rounded and colorful · AUR" \
+    "flat-remix|Flat Remix|Matches the Flat Remix theme · AUR" \
+    "elementary|elementary|Clean · official repo" \
+    "breeze|Breeze|KDE's · official repo" \
+    "arc|Arc|Matches the Arc theme · AUR" \
+    "default|Default|Adwaita"
+  if [[ "$REIMU_AUR" == none ]]; then
+    local t="${THEMES[$REIMU_THEME]:-}" i="${ICONS[$REIMU_ICONS]:-}"
+    if [[ "$(theme_field "$t" 2)" == aur || "$(theme_field "$i" 2)" == aur ]]; then
+      warn "That theme comes from the AUR: pick an AUR helper in Software, or it will be skipped."
+    fi
+  fi
   return 0
 }
 
@@ -321,7 +346,7 @@ wiz_guided() {
   step "Users"; q_user; q_shell; q_sudo; q_root
   step "Network and services"; q_network; q_extras; q_power
   step "Repositories"; q_repos; q_custom_repos
-  step "Desktop"; q_desktop; q_dm; q_win2k; q_gpu
+  step "Desktop"; q_desktop; q_dm; q_theme; q_gpu
   step "Software"; q_aur; q_bundles; q_extra_packages; q_services
 }
 
@@ -366,7 +391,7 @@ Nothing is written to the disk until you see the summary and type YES." 196
       "custom_repos|Custom repositories|${REIMU_CUSTOM_REPOS:-none}" \
       "desktop|Desktop|$REIMU_DESKTOP" \
       "dm|Login manager|$REIMU_DISPLAY_MANAGER" \
-      "win2k|Win2k Undead theme|$( [[ "$REIMU_DESKTOP" == xfce ]] && printf '%s' "$REIMU_XFCE_WIN2K" || printf 'xfce only' )" \
+      "theme|Theme and icons|$( [[ "$REIMU_DESKTOP" == xfce ]] && printf '%s %s · %s' "$REIMU_THEME" "$REIMU_THEME_VARIANT" "$REIMU_ICONS" || printf 'xfce only' )" \
       "gpu|Graphics driver|$REIMU_GPU" \
       "aur|AUR helper|$REIMU_AUR" \
       "bundles|Software bundles|${REIMU_CATALOG:-none}" \

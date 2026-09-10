@@ -61,22 +61,9 @@ desktop_install() {
     none) ;;
   esac
 
-  [[ "$REIMU_DESKTOP" == xfce && "$REIMU_XFCE_WIN2K" == yes ]] && desktop_win2k
   desktop_gpu
 }
 
-desktop_win2k() {
-  msg "Fetching Win2k Undead for $REIMU_USER"
-  RUN_TITLE="Fetching Win2k Undead" chr_user_net "$REIMU_USER" "[ -d ~/Win2k_undead ] || git clone --depth 1 https://github.com/Chidaruma696/Win2k_undead ~/Win2k_undead"
-  write_file "/home/$REIMU_USER/Win2k_undead/READ-ME-FIRST.txt" <<'EOF'
-Win2k Undead was downloaded by Reimu but not applied: the theme configures
-your XFCE session, so it needs you logged in. Open a terminal and run:
-
-    cd ~/Win2k_undead && ./install.sh
-
-EOF
-  chr chown -R "$REIMU_USER:$REIMU_USER" "/home/$REIMU_USER/Win2k_undead"
-}
 
 desktop_gpu() {
   local gpu="$REIMU_GPU"
@@ -129,4 +116,75 @@ EOF
       esac ;;
   esac
   chr_pkg "${pkgs[@]}"
+}
+
+# ---- themes ------------------------------------------------------------------
+# key -> "package|aur?|dark name|light name". Names are the GTK/xfwm4 theme directories.
+declare -A THEMES=(
+  [default]="||Adwaita|Adwaita"
+  [greybird]="greybird-gtk-theme|aur|Greybird-dark|Greybird"
+  [arc]="arc-gtk-theme|aur|Arc-Dark|Arc"
+  [materia]="materia-gtk-theme||Materia-dark|Materia-light"
+  [orchis]="orchis-theme||Orchis-Dark|Orchis-Light"
+  [flat-remix]="flat-remix-gtk|aur|Flat-Remix-GTK-Blue-Dark|Flat-Remix-GTK-Blue-Light"
+  [skeuos]="skeuos-gtk|aur|Skeuos-Blue-Dark|Skeuos-Blue-Light"
+  [dracula]="dracula-gtk-theme|aur|Dracula|Dracula"
+  [nordic]="nordic-theme|aur|Nordic|Nordic"
+  [catppuccin]="catppuccin-gtk-theme-mocha|aur|catppuccin-mocha-blue-standard+default|catppuccin-mocha-blue-standard+default"
+)
+declare -A ICONS=(
+  [default]="||Adwaita|Adwaita"
+  [papirus]="papirus-icon-theme||Papirus-Dark|Papirus"
+  [tela]="tela-icon-theme|aur|Tela-dark|Tela"
+  [flat-remix]="flat-remix|aur|Flat-Remix-Blue-Dark|Flat-Remix-Blue-Light"
+  [elementary]="elementary-icon-theme||elementary|elementary"
+  [breeze]="breeze-icons||breeze-dark|breeze"
+  [arc]="arc-icon-theme|aur|Arc|Arc"
+)
+
+# Field n (1-4) of a THEMES/ICONS entry.
+theme_field() { local entry="$1" n="$2"; cut -d'|' -f"$n" <<< "$entry"; }
+
+# Package (or "aur:package") for a theme/icon key, empty for default.
+theme_package() {
+  local entry="$1" pkg aur
+  pkg="$(theme_field "$entry" 1)"; aur="$(theme_field "$entry" 2)"
+  [[ -z "$pkg" ]] && return 0
+  if [[ "$aur" == aur ]]; then printf 'aur:%s' "$pkg"; else printf '%s' "$pkg"; fi
+}
+
+theme_name() {
+  local entry="$1"
+  if [[ "$REIMU_THEME_VARIANT" == light ]]; then theme_field "$entry" 4; else theme_field "$entry" 3; fi
+}
+
+# XFCE reads these files on the user's first login: no session needed.
+desktop_apply_theme() {
+  [[ "$REIMU_DESKTOP" == xfce ]] || return 0
+  local gtk icons
+  gtk="$(theme_name "${THEMES[$REIMU_THEME]:-${THEMES[default]}}")"
+  icons="$(theme_name "${ICONS[$REIMU_ICONS]:-${ICONS[default]}}")"
+  msg "XFCE theme: $gtk · icons: $icons"
+  local dir="/home/$REIMU_USER/.config/xfce4/xfconf/xfce-perchannel-xml"
+  write_file "$dir/xsettings.xml" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xsettings" version="1.0">
+  <property name="Net" type="empty">
+    <property name="ThemeName" type="string" value="$gtk"/>
+    <property name="IconThemeName" type="string" value="$icons"/>
+  </property>
+  <property name="Gtk" type="empty">
+    <property name="CursorThemeName" type="string" value="Adwaita"/>
+  </property>
+</channel>
+EOF
+  write_file "$dir/xfwm4.xml" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfwm4" version="1.0">
+  <property name="general" type="empty">
+    <property name="theme" type="string" value="$gtk"/>
+  </property>
+</channel>
+EOF
+  chr chown -R "$REIMU_USER:$REIMU_USER" "/home/$REIMU_USER/.config"
 }

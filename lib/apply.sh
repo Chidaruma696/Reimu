@@ -117,7 +117,6 @@ apply_finish() {
 
 apply_goodbye() {
   local extra=""
-  [[ "$REIMU_DESKTOP" == xfce && "$REIMU_XFCE_WIN2K" == yes ]] && extra=$'\n''Win2k Undead is in ~/Win2k_undead; run ./install.sh after your first login.'
   [[ -n "$FAILED_PACKAGES" ]] && extra+=$'\n'"Packages that could not be installed (install them later by hand):$FAILED_PACKAGES"
   ui_box "Arch Linux is installed" "Take the USB out and reboot.
 Your recipe is at /root/reimu.conf and the log at /var/log/reimu/install.log.

@@ -118,7 +118,7 @@ En [`reimu.conf.example`](reimu.conf.example) están todas las claves con sus op
 | **AUR** | paru o yay, compilado dentro del chroot como tu usuario. |
 | **Paquetes** | development, office, internet, multimedia, graphics, gaming, utilities, fonts, japanese (fcitx5 + mozc), virtualization. El asistente muestra exactamente qué paquetes instala cada uno antes de elegir. Listas de texto plano en [`catalog/`](catalog), fáciles de editar. |
 | **Mantenimiento** | Descargas en paralelo y color en pacman, `reflector.timer`, `paccache.timer`, `fstrim.timer`, `systemd-timesyncd`, power-profiles-daemon en portátiles. |
-| **Extra para XFCE** | Opcionalmente descarga [Win2k Undead](https://github.com/Chidaruma696/Win2k_undead) en tu home para el aspecto de Windows 2000. |
+| **Temas (XFCE)** | Greybird, Arc, Materia, Orchis, Flat Remix, Skeuos (el aspecto de Kali), Dracula, Nordic, Catppuccin, en oscuro o claro, con iconos Papirus, Tela, Flat Remix, elementary, Breeze o Arc. Se instalan y quedan como predeterminados de tu usuario, así que el primer inicio de sesión ya se ve así. |
 
 <br/>
 
