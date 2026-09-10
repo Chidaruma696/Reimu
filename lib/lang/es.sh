@@ -106,7 +106,7 @@ T["automatic"]="automático"
 T["own password"]="contraseña propia"
 T["locked"]="bloqueada"
 T["not a laptop"]="no es portátil"
-T["xfce only"]="solo XFCE"
+T["no desktop"]="sin escritorio"
 T["as it comes"]="tal como viene"
 T["auto · %s"]="auto · %s"
 T["manual · root %s"]="manual · raíz %s"
@@ -222,8 +222,8 @@ T["KDE's"]="El de KDE"
 T["Light and classic"]="Ligero y clásico"
 T["Text mode"]="Modo texto"
 T["Start from a TTY"]="Arrancar desde una TTY"
-T["Themes are applied automatically for XFCE only (for now)."]="Los temas se aplican solos únicamente en XFCE (por ahora)."
-T["Do you want Reimu to set a theme and icons? (No leaves XFCE as it comes)"]="¿Quieres que Reimu ponga tema e iconos? (No deja XFCE tal como viene)"
+T["No desktop was chosen: nothing to theme."]="No elegiste escritorio: no hay nada que tematizar."
+T["Do you want Reimu to set a theme and icons? (No leaves the desktop as it comes)"]="¿Quieres que Reimu ponga tema e iconos? (No deja el escritorio tal como viene)"
 T["Theme"]="Tema"
 T["XFCE's classic · light or dark · AUR"]="El clásico de XFCE · claro u oscuro · AUR"
 T["Flat with transparency · the popular one · AUR"]="Plano con transparencias · el popular · AUR"
@@ -564,10 +564,13 @@ help_theme() {
   cat <<'EOF'
 Un tema cambia el aspecto de ventanas, botones y menús; los iconos cambian las
 imágenes de menús y gestores de archivos. Reimu instala los paquetes y los deja
-como predeterminados de tu usuario, así que XFCE ya se ve así en el primer
-inicio de sesión. Los temas "AUR" necesitan el ayudante de AUR de la sección
-Software (paru o yay).
-Esto es opcional: di que no y XFCE queda exactamente como viene.
+como predeterminados de tu usuario, así que el escritorio ya se ve así en el
+primer inicio de sesión. Son temas GTK: en XFCE, GNOME, Cinnamon, MATE, Budgie
+y los gestores de ventanas cubren todo el escritorio; en KDE Plasma, LXQt y
+COSMIC llegan a las apps GTK y a los iconos, y el escritorio se pone oscuro o
+claro a juego. Los temas "AUR" necesitan el ayudante de AUR de la sección
+Software.
+Esto es opcional: di que no y el escritorio queda exactamente como viene.
 EOF
 }
 
@@ -586,7 +589,7 @@ También tiene "recetas": configuraciones de una tecla que instalan un programa
 Y lo dejan funcionando, cosa que los gestores de paquetes normales nunca hacen.
 Ejemplos: Docker con el servicio en marcha y tu usuario con permiso para
 usarlo, máquinas virtuales QEMU listas para crear una VM, escritura en japonés,
-fuentes extra, temas de XFCE.
+fuentes extra, temas de escritorio.
 Hecha por el mismo autor que Reimu. Es software joven. No sustituye a pacman:
 ejecuta pacman por ti. Un solo archivo en /usr/local/bin/sanae; se quita con:
 sudo rm /usr/local/bin/sanae

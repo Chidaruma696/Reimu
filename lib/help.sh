@@ -254,9 +254,12 @@ help_theme() {
   cat <<'EOF'
 A theme changes how windows, buttons and menus look; icons change the pictures
 in menus and file managers. Reimu installs the packages and sets them as the
-default for your user, so XFCE already looks like that at the first login.
-"AUR" themes need the AUR helper from the Software section (paru or yay).
-This is optional: say No and XFCE stays exactly as it ships.
+default for your user, so the desktop already looks like that at the first
+login. These are GTK themes: on XFCE, GNOME, Cinnamon, MATE, Budgie and the
+window managers they cover the whole desktop; on KDE Plasma, LXQt and COSMIC
+they reach the GTK apps and the icons, and the desktop itself goes dark or
+light to match. "AUR" themes need the AUR helper from the Software section.
+This is optional: say No and the desktop stays exactly as it ships.
 EOF
 }
 
@@ -273,7 +276,7 @@ before updating, and can clean up leftover packages.
 It also has "recipes": one-key setups that install a program AND leave it
 working, which plain package managers never do. Examples: Docker with the
 service running and your user allowed to use it, QEMU virtual machines ready
-to create a VM, Japanese input, extra fonts, XFCE themes.
+to create a VM, Japanese input, extra fonts, desktop themes.
 Made by the same author as Reimu. It is young software. It does not replace
 pacman; it runs pacman for you. One file in /usr/local/bin/sanae;
 remove it with: sudo rm /usr/local/bin/sanae

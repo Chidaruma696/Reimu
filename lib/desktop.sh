@@ -126,7 +126,7 @@ EOF
 }
 
 # ---- themes ------------------------------------------------------------------
-# key -> "package|aur?|dark name|light name". Names are the GTK/xfwm4 theme directories.
+# key -> "package|aur?|dark name|light name". Names are the directories under /usr/share/themes.
 declare -A THEMES=(
   [default]="||Adwaita|Adwaita"
   [greybird]="greybird-gtk-theme|aur|Greybird-dark|Greybird"
@@ -166,15 +166,54 @@ theme_name() {
 }
 
 # XFCE reads these files on the user's first login: no session needed.
+# Does the chosen GTK theme ship a part (xfwm4, metacity-1, cinnamon, gtk-4.0…)?
+# Assumed yes in a dry run, where nothing is installed.
+theme_has() { (( DRY_RUN )) || [[ -e "$REIMU_MNT/usr/share/themes/$1/$2" ]]; }
+
+# A dconf keyfile that becomes the system default for every user at first login
+# (no session bus exists at install time, so gsettings is not an option).
+theme_dconf() {
+  write_file /etc/dconf/profile/user <<'EOF'
+user-db:user
+system-db:local
+EOF
+  write_file /etc/dconf/db/local.d/00-reimu-theme <<< "$1"
+  chr_pkg dconf
+  try arch-chroot "$REIMU_MNT" dconf update
+}
+
 desktop_apply_theme() {
-  [[ "$REIMU_DESKTOP" == xfce ]] || return 0
+  [[ "$REIMU_DESKTOP" == none ]] && return 0
   [[ "$REIMU_THEME" == default && "$REIMU_ICONS" == default ]] && return 0
-  local gtk icons
+  local gtk icons dark=0 scheme=default home="/home/$REIMU_USER" f
   gtk="$(theme_name "${THEMES[$REIMU_THEME]:-${THEMES[default]}}")"
   icons="$(theme_name "${ICONS[$REIMU_ICONS]:-${ICONS[default]}}")"
-  msg "XFCE theme: $gtk · icons: $icons"
-  local dir="/home/$REIMU_USER/.config/xfce4/xfconf/xfce-perchannel-xml"
-  write_file "$dir/xsettings.xml" <<EOF
+  [[ "$REIMU_THEME_VARIANT" == dark ]] && { dark=1; scheme=prefer-dark; }
+  msg "Theme: $gtk · icons: $icons · $REIMU_DESKTOP"
+
+  # GTK 2, 3 and 4: every desktop and every GTK app reads these.
+  write_file "$home/.gtkrc-2.0" <<EOF
+gtk-theme-name="$gtk"
+gtk-icon-theme-name="$icons"
+EOF
+  for f in gtk-3.0 gtk-4.0; do
+    write_file "$home/.config/$f/settings.ini" <<EOF
+[Settings]
+gtk-theme-name=$gtk
+gtk-icon-theme-name=$icons
+gtk-application-prefer-dark-theme=$dark
+EOF
+  done
+  # GTK 4 and libadwaita apps only follow a theme that is linked into ~/.config/gtk-4.0.
+  if theme_has "$gtk" gtk-4.0; then
+    for f in gtk.css gtk-dark.css assets; do
+      theme_has "$gtk" "gtk-4.0/$f" && run ln -sfn "/usr/share/themes/$gtk/gtk-4.0/$f" "$REIMU_MNT$home/.config/gtk-4.0/$f"
+    done
+  fi
+
+  case "$REIMU_DESKTOP" in
+    xfce)
+      write_file "$home/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xsettings" version="1.0">
   <property name="Net" type="empty">
@@ -186,7 +225,8 @@ desktop_apply_theme() {
   </property>
 </channel>
 EOF
-  write_file "$dir/xfwm4.xml" <<EOF
+      if theme_has "$gtk" xfwm4; then
+        write_file "$home/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfwm4" version="1.0">
   <property name="general" type="empty">
@@ -194,5 +234,70 @@ EOF
   </property>
 </channel>
 EOF
-  chr chown -R "$REIMU_USER:$REIMU_USER" "/home/$REIMU_USER/.config"
+      fi ;;
+    plasma)
+      # Plasma keeps its own widget style; the GTK theme reaches GTK apps, the
+      # icons reach everything, and Breeze goes dark or light to match.
+      local colors=BreezeLight lnf=org.kde.breeze.desktop
+      (( dark )) && { colors=BreezeDark; lnf=org.kde.breezedark.desktop; }
+      write_file "$home/.config/kdeglobals" <<EOF
+[General]
+ColorScheme=$colors
+
+[Icons]
+Theme=$icons
+
+[KDE]
+LookAndFeelPackage=$lnf
+EOF
+      ;;
+    lxqt)
+      local lx=light; (( dark )) && lx=dark
+      write_file "$home/.config/lxqt/lxqt.conf" <<EOF
+[General]
+icon_theme=$icons
+theme=$lx
+EOF
+      ;;
+    cosmic)
+      local cd=false; (( dark )) && cd=true
+      write_file "$home/.config/cosmic/com.system76.CosmicTheme.Mode/v1/is_dark" <<< "$cd" ;;
+    cinnamon)
+      local extra=""
+      theme_has "$gtk" metacity-1 && extra+=$'\n[org/cinnamon/desktop/wm/preferences]\ntheme=\''"$gtk"$'\''
+      theme_has "$gtk" cinnamon && extra+=$'\n[org/cinnamon/theme]\nname=\''"$gtk"$'\''
+      theme_dconf "[org/cinnamon/desktop/interface]
+gtk-theme='$gtk'
+icon-theme='$icons'
+$extra" ;;
+    mate)
+      local extra=""
+      theme_has "$gtk" metacity-1 && extra+=$'\n[org/mate/marco/general]\ntheme=\''"$gtk"$'\''
+      theme_dconf "[org/mate/desktop/interface]
+gtk-theme='$gtk'
+icon-theme='$icons'
+$extra" ;;
+    deepin)
+      theme_dconf "[com/deepin/xsettings]
+gtk-theme-name='$gtk'
+icon-theme-name='$icons'
+
+[org/gnome/desktop/interface]
+gtk-theme='$gtk'
+icon-theme='$icons'
+color-scheme='$scheme'" ;;
+    *)
+      # GNOME, Budgie and the Wayland/X11 window managers: GTK apps and portals
+      # read org.gnome.desktop.interface. The shell theme needs the user-theme
+      # extension; the key is harmless without it.
+      local extra=""
+      theme_has "$gtk" gnome-shell && extra+=$'\n[org/gnome/shell/extensions/user-theme]\nname=\''"$gtk"$'\''
+      theme_dconf "[org/gnome/desktop/interface]
+gtk-theme='$gtk'
+icon-theme='$icons'
+color-scheme='$scheme'
+$extra" ;;
+  esac
+  chr chown -R "$REIMU_USER:$REIMU_USER" "$home/.config" "$home/.gtkrc-2.0"
+  return 0
 }

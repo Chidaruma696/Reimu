@@ -100,7 +100,7 @@ T["automatic"]="automatique"
 T["own password"]="mot de passe propre"
 T["locked"]="verrouillé"
 T["not a laptop"]="pas un portable"
-T["xfce only"]="XFCE seulement"
+T["no desktop"]="pas de bureau"
 T["as it comes"]="tel quel"
 T["auto · %s"]="auto · %s"
 T["manual · root %s"]="manuel · racine %s"
@@ -214,8 +214,8 @@ T["KDE's"]="Celui de KDE"
 T["Light and classic"]="Léger et classique"
 T["Text mode"]="Mode texte"
 T["Start from a TTY"]="Démarrer depuis un TTY"
-T["Themes are applied automatically for XFCE only (for now)."]="Les thèmes ne s'appliquent automatiquement que sur XFCE (pour l'instant)."
-T["Do you want Reimu to set a theme and icons? (No leaves XFCE as it comes)"]="Voulez-vous que Reimu applique un thème et des icônes ? (Non laisse XFCE tel quel)"
+T["No desktop was chosen: nothing to theme."]="Aucun bureau choisi : rien à habiller."
+T["Do you want Reimu to set a theme and icons? (No leaves the desktop as it comes)"]="Voulez-vous que Reimu applique un thème et des icônes ? (Non laisse le bureau tel quel)"
 T["Theme"]="Thème"
 T["XFCE's classic · light or dark · AUR"]="Le classique de XFCE · clair ou sombre · AUR"
 T["Flat with transparency · the popular one · AUR"]="Plat avec transparence · le populaire · AUR"
@@ -502,10 +502,13 @@ help_theme() {
   cat <<'EOF'
 Un thème change l'apparence des fenêtres, boutons et menus ; les icônes changent
 les images des menus et des gestionnaires de fichiers. Reimu installe les paquets
-et les définit par défaut pour votre utilisateur, pour que XFCE ait déjà cet
-aspect à la première connexion. Les thèmes « AUR » nécessitent l'assistant AUR de
-la section Logiciels (paru ou yay).
-C'est optionnel : dites Non et XFCE reste exactement tel quel.
+et les définit par défaut pour votre utilisateur, pour que le bureau ait déjà
+cet aspect à la première connexion. Ce sont des thèmes GTK : sur XFCE, GNOME,
+Cinnamon, MATE, Budgie et les gestionnaires de fenêtres, ils couvrent tout le
+bureau ; sur KDE Plasma, LXQt et COSMIC, ils atteignent les applications GTK et
+les icônes, et le bureau passe en sombre ou en clair pour s'accorder. Les thèmes
+« AUR » nécessitent l'assistant AUR de la section Logiciels.
+C'est optionnel : dites Non et le bureau reste exactement tel quel.
 EOF
 }
 
@@ -524,7 +527,7 @@ Elle a aussi des « recettes » : des installations d'une touche qui installent 
 programme ET le laissent fonctionnel, ce que les gestionnaires de paquets
 ordinaires ne font jamais. Exemples : Docker avec le service lancé et votre
 utilisateur autorisé, des machines virtuelles QEMU prêtes à créer une VM, la
-saisie en japonais, des polices supplémentaires, des thèmes XFCE.
+saisie en japonais, des polices supplémentaires, des thèmes de bureau.
 Par le même auteur que Reimu. C'est un logiciel jeune. Elle ne remplace pas
 pacman : elle exécute pacman pour vous. Un seul fichier dans
 /usr/local/bin/sanae ; à retirer avec : sudo rm /usr/local/bin/sanae

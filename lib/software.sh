@@ -34,8 +34,8 @@ sw_read_bundles() {
   local -a extra
   read -r -a extra <<< "$REIMU_EXTRA_PACKAGES"
   SW_REPO+=("${extra[@]}")
-  # Theme and icon packages (XFCE).
-  if [[ "$REIMU_DESKTOP" == xfce ]]; then
+  # Theme and icon packages (any desktop).
+  if [[ "$REIMU_DESKTOP" != none ]]; then
     local t
     for t in "$(theme_package "${THEMES[$REIMU_THEME]:-}")" "$(theme_package "${ICONS[$REIMU_ICONS]:-}")"; do
       case "$t" in "") ;; aur:*) SW_AUR+=("${t#aur:}") ;; *) SW_REPO+=("$t") ;; esac
