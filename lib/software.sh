@@ -118,6 +118,29 @@ sw_bundle_contents() {
 # Sanae: the software store for the terminal. One static binary
 # from its latest release, plus the two tools it reads pacman through.
 SANAE_URL="https://github.com/Chidaruma696/Sanae/releases/latest/download/sanae-x86_64-linux"
+# The same binary on Sanae's bin branch: github.com archives and jsDelivr keep
+# working on networks that reset githubusercontent.com (where releases live).
+SANAE_ARCHIVE="https://github.com/Chidaruma696/Sanae/archive/refs/heads/bin.tar.gz"
+SANAE_MIRROR="https://cdn.jsdelivr.net/gh/Chidaruma696/Sanae@bin/sanae-x86_64-linux"
+
+sw_is_elf() { [[ "$(head -c 4 "$1" 2>/dev/null)" == $'\x7fELF' ]]; }
+
+# Download the Sanae binary to $1 from the first source that works.
+sw_fetch_sanae() {
+  local out="$1"
+  rm -f "$out" "$out.tgz"
+  if fetch "$SANAE_URL" "$out" && sw_is_elf "$out"; then return 0; fi
+  log "release download failed; trying the bin branch archive"
+  rm -f "$out"
+  if fetch "$SANAE_ARCHIVE" "$out.tgz" && tar xzOf "$out.tgz" --wildcards '*/sanae-x86_64-linux' > "$out" 2>> "$REIMU_LOG" && sw_is_elf "$out"; then
+    rm -f "$out.tgz"; return 0
+  fi
+  log "archive download failed; trying jsDelivr"
+  rm -f "$out" "$out.tgz"
+  if fetch "$SANAE_MIRROR" "$out" && sw_is_elf "$out"; then return 0; fi
+  rm -f "$out"
+  return 1
+}
 sw_sanae() {
   [[ "$REIMU_SANAE" == yes ]] || return 0
   msg "Sanae"
@@ -129,7 +152,7 @@ sw_sanae() {
   net_wait
   local tmp="$REIMU_MNT/usr/local/bin/sanae.part"
   mkdir -p "$REIMU_MNT/usr/local/bin"
-  if RUN_TITLE="Downloading Sanae" run_net fetch "$SANAE_URL" "$tmp" && [[ "$(head -c 4 "$tmp" 2>/dev/null)" == $'\x7fELF' ]]; then
+  if RUN_TITLE="Downloading Sanae" run_net sw_fetch_sanae "$tmp"; then
     mv -f "$tmp" "$REIMU_MNT/usr/local/bin/sanae"
     chmod 755 "$REIMU_MNT/usr/local/bin/sanae"
     ok "Sanae installed: run 'sanae' after the first login."
