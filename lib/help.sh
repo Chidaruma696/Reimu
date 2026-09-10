@@ -274,8 +274,8 @@ It also has "recipes": one-key setups that install a program AND leave it
 working, which plain package managers never do. Examples: Docker with the
 service running and your user allowed to use it, QEMU virtual machines ready
 to create a VM, Japanese input, extra fonts, XFCE themes.
-Made by the same author as Reimu. Experimental: it is young software. It does
-not replace pacman; it runs pacman for you. One file in /usr/local/bin/sanae;
+Made by the same author as Reimu. It is young software. It does not replace
+pacman; it runs pacman for you. One file in /usr/local/bin/sanae;
 remove it with: sudo rm /usr/local/bin/sanae
 EOF
 }

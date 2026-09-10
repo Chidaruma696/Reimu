@@ -118,7 +118,7 @@ apply_finish() {
 
 apply_goodbye() {
   local extra=""
-  [[ "$REIMU_SANAE" == yes ]] && extra+=$'\n'"Sanae is installed: type sanae after logging in to browse and install software (experimental)."
+  [[ "$REIMU_SANAE" == yes ]] && extra+=$'\n'"Sanae is installed: type sanae after logging in to browse and install software."
   [[ -n "$FAILED_PACKAGES" ]] && extra+=$'\n'"Packages that could not be installed (install them later by hand):$FAILED_PACKAGES"
   ui_box "Arch Linux is installed" "Take the USB out and reboot.
 Your recipe is at /root/reimu.conf and the log at /var/log/reimu/install.log.

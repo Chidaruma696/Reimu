@@ -63,4 +63,4 @@ REIMU_AUR="paru"                    # paru · yay · none
 REIMU_CATALOG="development internet multimedia utilities fonts japanese"
 REIMU_EXTRA_PACKAGES="fastfetch"
 REIMU_SERVICES=""
-REIMU_SANAE="yes"                   # install the Sanae software store (experimental): yes · no · ask
+REIMU_SANAE="yes"                   # install the Sanae software store: yes · no · ask
