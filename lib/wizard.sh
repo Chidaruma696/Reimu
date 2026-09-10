@@ -352,15 +352,142 @@ q_services()       { ask_optional REIMU_SERVICES "Extra systemd units to enable"
 
 # ---- sections and menu -----------------------------------------------------
 
+# ---- the settings table: id, group, label, and how to show the current value ----
+
+# id|Group|Label. Order = order of the guided run and of the menu.
+SETTINGS=(
+  "keymap|Language|Keyboard layout"
+  "locale|Language|Language"
+  "extra_locales|Language|Extra languages"
+  "timezone|Language|Time zone"
+  "hostname|Language|Host name"
+  "mirrors|Language|Mirror countries"
+  "disk|Disk|Disk"
+  "partitions|Disk|Partitions"
+  "fs|Disk|Filesystem"
+  "snapshots|Disk|Snapshots"
+  "encrypt|Disk|Encryption"
+  "swap|Disk|Swap"
+  "bootloader|Boot|Bootloader"
+  "kernels|Boot|Kernels"
+  "user|Users|User name"
+  "shell|Users|Shell"
+  "sudo|Users|Administrator tool"
+  "root|Users|Root account"
+  "network|Network|Network manager"
+  "extras|Network|Services"
+  "power|Network|Laptop power"
+  "repos|Repositories|Extra repositories"
+  "custom_repos|Repositories|Custom repositories"
+  "desktop|Desktop|Desktop"
+  "dm|Desktop|Login manager"
+  "theme|Desktop|Theme and icons"
+  "gpu|Desktop|Graphics driver"
+  "aur|Software|AUR helper"
+  "bundles|Software|Software bundles"
+  "extra_packages|Software|Extra packages"
+  "services|Software|Extra services"
+  "sanae|Software|Sanae software store"
+)
+
+# Questions the guided run skips because they only apply sometimes (they stay reachable from the menu).
+wiz_skip() {
+  case "$1" in
+    partitions) [[ "$REIMU_DISK_MODE" != manual ]] ;;
+    snapshots) [[ "$REIMU_FS" != btrfs ]] ;;
+    power) ! (( DETECT_LAPTOP )) ;;
+    dm|theme) [[ "$REIMU_DESKTOP" == none ]] ;;
+    *) return 1 ;;
+  esac
+}
+
+wiz_value() {
+  case "$1" in
+    keymap) printf '%s' "$REIMU_KEYMAP" ;;
+    locale) printf '%s' "$REIMU_LOCALE" ;;
+    extra_locales) printf '%s' "${REIMU_EXTRA_LOCALES:-none}" ;;
+    timezone) printf '%s' "$REIMU_TIMEZONE" ;;
+    hostname) printf '%s' "$REIMU_HOSTNAME" ;;
+    mirrors) printf '%s' "${REIMU_MIRROR_COUNTRIES:-worldwide}" ;;
+    disk) wiz_disk_value ;;
+    partitions) if [[ "$REIMU_DISK_MODE" == manual ]]; then printf 'boot %s · root %s' "$REIMU_PART_BOOT" "$REIMU_PART_ROOT"; else printf 'automatic'; fi ;;
+    fs) printf '%s' "$REIMU_FS" ;;
+    snapshots) printf '%s' "$REIMU_SNAPSHOTS" ;;
+    encrypt) printf '%s' "$REIMU_ENCRYPT" ;;
+    swap) printf '%s' "$REIMU_SWAP${REIMU_SWAP_SIZE:+ $REIMU_SWAP_SIZE}" ;;
+    bootloader) printf '%s' "$REIMU_BOOTLOADER" ;;
+    kernels) printf '%s' "$REIMU_KERNELS" ;;
+    user) printf '%s' "$REIMU_USER" ;;
+    shell) printf '%s' "$REIMU_USER_SHELL" ;;
+    sudo) printf '%s' "$REIMU_SUDO" ;;
+    root) if [[ "$REIMU_ROOT_LOGIN" == yes ]]; then printf 'own password'; else printf 'locked'; fi ;;
+    network) printf '%s' "$REIMU_NETWORK" ;;
+    extras)
+      local v=""
+      [[ "$REIMU_BLUETOOTH" != no ]] && v+="bluetooth "
+      [[ "$REIMU_PRINTING" == yes ]] && v+="printing "
+      [[ "$REIMU_FIREWALL" != no ]] && v+="$REIMU_FIREWALL "
+      [[ "$REIMU_SSH" == yes ]] && v+="ssh"
+      printf '%s' "${v:-none}" ;;
+    power) if (( DETECT_LAPTOP )); then printf '%s' "$REIMU_POWER"; else printf 'not a laptop'; fi ;;
+    repos) printf '%s' "${REIMU_REPOS:-none}" ;;
+    custom_repos) printf '%s' "${REIMU_CUSTOM_REPOS:-none}" ;;
+    desktop) printf '%s' "$REIMU_DESKTOP" ;;
+    dm) printf '%s' "$REIMU_DISPLAY_MANAGER" ;;
+    theme) wiz_theme_value ;;
+    gpu) printf '%s' "$REIMU_GPU" ;;
+    aur) printf '%s' "$REIMU_AUR" ;;
+    bundles) printf '%s' "${REIMU_CATALOG:-none}" ;;
+    extra_packages) printf '%s' "${REIMU_EXTRA_PACKAGES:-none}" ;;
+    services) printf '%s' "${REIMU_SERVICES:-none}" ;;
+    sanae) printf '%s' "$REIMU_SANAE" ;;
+  esac
+}
+
+# The side pane: what has been answered, what is being asked, what is left.
+wiz_progress() {
+  local current="$1" done_upto="$2" out="" i entry id group label last_group=""
+  out+="  Your choices"$'\n'
+  for i in "${!SETTINGS[@]}"; do
+    entry="${SETTINGS[$i]}"; id="${entry%%|*}"; entry="${entry#*|}"; group="${entry%%|*}"; label="${entry#*|}"
+    wiz_skip "$id" && [[ "$id" != "$current" ]] && continue
+    if [[ "$group" != "$last_group" ]]; then out+=$'\n'"  $group"$'\n'; last_group="$group"; fi
+    if [[ "$id" == "$current" ]]; then
+      out+="  ▶ $label"$'\n'
+    elif (( i < done_upto )); then
+      out+="  ✔ $label: $(wiz_value "$id")"$'\n'
+    else
+      out+="  ○ $label"$'\n'
+    fi
+  done
+  [[ -z "$current" ]] && out+=$'\n'"  Esc in a question goes back one."$'\n'
+  progress_write "$out"
+}
+
+# Ask every setting in order. Esc in a question goes back to the previous one.
 wiz_guided() {
-  step "Language, keyboard and time"; q_keymap; q_locale; q_extra_locales; q_timezone; q_hostname; q_mirrors
-  step "Disk"; q_disk; q_fs; q_snapshots; q_encrypt; q_swap
-  step "Boot"; q_bootloader; q_kernels
-  step "Users"; q_user; q_shell; q_sudo; q_root
-  step "Network and services"; q_network; q_extras; q_power
-  step "Repositories"; q_repos; q_custom_repos
-  step "Desktop"; q_desktop; q_dm; q_theme; q_gpu
-  step "Software"; q_aur; q_bundles; q_extra_packages; q_services; q_sanae
+  local i=0 n=${#SETTINGS[@]} id group label last_group=""
+  while (( i < n )); do
+    id="${SETTINGS[$i]%%|*}"
+    if wiz_skip "$id"; then i=$((i+1)); continue; fi
+    group="${SETTINGS[$i]#*|}"; label="${group#*|}"; group="${group%%|*}"
+    if [[ "$group" != "$last_group" ]]; then step "$group"; last_group="$group"; fi
+    wiz_progress "$id" "$i"
+    UI_BACK=0
+    "q_$id"
+    if (( UI_BACK )); then
+      UI_BACK=0
+      # Step back to the previous question that was actually asked.
+      local j=$((i-1))
+      while (( j > 0 )) && wiz_skip "${SETTINGS[$j]%%|*}"; do j=$((j-1)); done
+      i=$(( j < 0 ? 0 : j ))
+      last_group=""
+      ui_note "Back to: ${SETTINGS[$i]##*|}"
+    else
+      i=$((i+1))
+    fi
+  done
+  wiz_progress "" "$n"
 }
 
 wiz_theme_value() {
@@ -379,47 +506,23 @@ wizard() {
   local choice
   if [[ -z "$REIMU_USER" ]]; then
     ui_box "Welcome" "Reimu asks a few questions, explains each one, and then installs Arch Linux from start to finish: base system, desktop, drivers, the lot.
-Made a mistake? Every answer can be changed one by one from the menu at the end.
+Your answers pile up on the left as you go. Esc in any question goes back to the previous one; the menu at the end lets you change any single answer.
 Nothing is written to the disk until you see the summary and type YES." 196
     wiz_guided
   fi
   while true; do
-    ask_menu choice "Everything Reimu will do · pick a line to change it" \
-      "keymap|Keyboard layout|$REIMU_KEYMAP" \
-      "locale|Language|$REIMU_LOCALE" \
-      "extra_locales|Extra languages|${REIMU_EXTRA_LOCALES:-none}" \
-      "timezone|Time zone|$REIMU_TIMEZONE" \
-      "hostname|Host name|$REIMU_HOSTNAME" \
-      "mirrors|Mirror countries|${REIMU_MIRROR_COUNTRIES:-worldwide}" \
-      "disk|Disk|$(wiz_disk_value)" \
-      "partitions|Partitions (manual mode)|$( [[ "$REIMU_DISK_MODE" == manual ]] && printf 'boot %s · root %s' "$REIMU_PART_BOOT" "$REIMU_PART_ROOT" || printf 'automatic' )" \
-      "fs|Filesystem|$REIMU_FS" \
-      "snapshots|Snapshots|$REIMU_SNAPSHOTS" \
-      "encrypt|Encryption|$REIMU_ENCRYPT" \
-      "swap|Swap|$REIMU_SWAP${REIMU_SWAP_SIZE:+ $REIMU_SWAP_SIZE}" \
-      "bootloader|Bootloader|$REIMU_BOOTLOADER" \
-      "kernels|Kernels|$REIMU_KERNELS" \
-      "user|User name|$REIMU_USER" \
-      "shell|Shell|$REIMU_USER_SHELL" \
-      "sudo|Administrator tool|$REIMU_SUDO" \
-      "root|Root account|$( [[ "$REIMU_ROOT_LOGIN" == yes ]] && echo 'own password' || echo locked )" \
-      "network|Network manager|$REIMU_NETWORK" \
-      "extras|Services|$( [[ "$REIMU_BLUETOOTH" != no ]] && printf 'bluetooth ' )$( [[ "$REIMU_PRINTING" == yes ]] && printf 'printing ' )$( [[ "$REIMU_FIREWALL" != no ]] && printf '%s ' "$REIMU_FIREWALL" )$( [[ "$REIMU_SSH" == yes ]] && printf 'ssh' )" \
-      "power|Laptop power|$( (( DETECT_LAPTOP )) && printf '%s' "$REIMU_POWER" || printf 'not a laptop' )" \
-      "repos|Extra repositories|${REIMU_REPOS:-none}" \
-      "custom_repos|Custom repositories|${REIMU_CUSTOM_REPOS:-none}" \
-      "desktop|Desktop|$REIMU_DESKTOP" \
-      "dm|Login manager|$REIMU_DISPLAY_MANAGER" \
-      "theme|Theme and icons|$(wiz_theme_value)" \
-      "gpu|Graphics driver|$REIMU_GPU" \
-      "aur|AUR helper|$REIMU_AUR" \
-      "bundles|Software bundles|${REIMU_CATALOG:-none}" \
-      "extra_packages|Extra packages|${REIMU_EXTRA_PACKAGES:-none}" \
-      "services|Extra services|${REIMU_SERVICES:-none}" \
-      "sanae|Sanae software store|$REIMU_SANAE" \
+    wiz_progress "" "${#SETTINGS[@]}"
+    local -a items=()
+    local entry id label
+    for entry in "${SETTINGS[@]}"; do
+      id="${entry%%|*}"; label="${entry##*|}"
+      items+=("$id|$label|$(wiz_value "$id")")
+    done
+    ask_menu choice "Everything Reimu will do · pick a line to change it" "${items[@]}" \
       "save|💾 Save configuration to a file|" \
       "install|🚀 Start the installation|" \
       "quit|✖ Quit|"
+    UI_BACK=0
     case "$choice" in
       save)
         local f; ask_text f "File" "${REIMU_SAVE_PATH:-./reimu.conf}"
@@ -429,7 +532,9 @@ Nothing is written to the disk until you see the summary and type YES." 196
         if config_validate; then return 0; fi
         warn "Fix the problems above before installing." ;;
       quit) exit 0 ;;
+      __again__) ;;
       *) "q_$choice" ;;
     esac
+    UI_BACK=0
   done
 }
