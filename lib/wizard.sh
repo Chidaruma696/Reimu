@@ -339,7 +339,7 @@ q_bundles() {
 
 q_sanae() {
   ui_help "$(help_sanae)"
-  if ask_yesno "Install Sanae, the software store for the terminal? (experimental)" "$( [[ "$REIMU_SANAE" == no ]] && echo n || echo y )"; then
+  if ask_yesno "Install Sanae, the software store for the terminal?" "$( [[ "$REIMU_SANAE" == no ]] && echo n || echo y )"; then
     REIMU_SANAE=yes
   else
     REIMU_SANAE=no

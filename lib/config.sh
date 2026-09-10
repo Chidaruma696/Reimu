@@ -60,7 +60,7 @@ config_defaults() {
   : "${REIMU_CATALOG:=}"
   : "${REIMU_EXTRA_PACKAGES:=}"
   : "${REIMU_SERVICES:=}"
-  : "${REIMU_SANAE:=ask}"             # yes | no | ask  (install the Sanae software store, experimental)
+  : "${REIMU_SANAE:=ask}"             # yes | no | ask  (install the Sanae software store)
 }
 
 # Keep the two ways of saying "multilib" in sync (REIMU_MULTILIB is the old key).

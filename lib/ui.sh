@@ -95,7 +95,7 @@ banner() {
   for i in "${!lines[@]}"; do
     if [[ -t 1 ]]; then printf '  \e[38;5;%sm%s\e[0m\n' "${shades[$i]}" "${lines[$i]}"; else printf '  %s\n' "${lines[$i]}"; fi
   done
-  printf '  %s霊夢 · Arch Linux installer · v%s · experimental%s\n\n' "$C_DIM" "$REIMU_VERSION" "$C_RESET"
+  printf '  %s霊夢 · Arch Linux installer · v%s%s\n\n' "$C_DIM" "$REIMU_VERSION" "$C_RESET"
 }
 
 hr() { printf '%s%s%s\n' "$C_DIM" "────────────────────────────────────────────────────────────────────────" "$C_RESET"; }

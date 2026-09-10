@@ -115,12 +115,12 @@ sw_bundle_contents() {
   printf '%s' "${out# }"
 }
 
-# Sanae: the software store for the terminal (experimental). One static binary
+# Sanae: the software store for the terminal. One static binary
 # from its latest release, plus the two tools it reads pacman through.
 SANAE_URL="https://github.com/Chidaruma696/Sanae/releases/latest/download/sanae-x86_64-linux"
 sw_sanae() {
   [[ "$REIMU_SANAE" == yes ]] || return 0
-  msg "Sanae (experimental)"
+  msg "Sanae"
   chr_pkg expac pacman-contrib archlinux-appstream-data
   if (( DRY_RUN )); then
     printf '%s  $ curl -fsSL %s -o %s/usr/local/bin/sanae && chmod 755 …%s\n' "$C_DIM" "$SANAE_URL" "$REIMU_MNT" "$C_RESET"
