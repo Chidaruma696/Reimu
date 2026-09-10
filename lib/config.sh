@@ -54,7 +54,7 @@ config_defaults() {
   : "${REIMU_DISPLAY_MANAGER:=auto}"
   : "${REIMU_THEME:=default}"         # see THEMES in desktop.sh
   : "${REIMU_THEME_VARIANT:=dark}"    # dark | light
-  : "${REIMU_ICONS:=papirus}"         # see ICONS in desktop.sh
+  : "${REIMU_ICONS:=default}"         # see ICONS in desktop.sh
   : "${REIMU_GPU:=auto}"
   : "${REIMU_AUR:=paru}"              # paru | yay | none
   : "${REIMU_CATALOG:=}"
