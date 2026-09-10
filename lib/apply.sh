@@ -122,7 +122,9 @@ apply_goodbye() {
   [[ -n "$FAILED_PACKAGES" ]] && extra+=$'\n'"Packages that could not be installed (install them later by hand):$FAILED_PACKAGES"
   ui_box "Arch Linux is installed" "Take the USB out and reboot.
 Your recipe is at /root/reimu.conf and the log at /var/log/reimu/install.log.
-Rerun the same install on another machine with:  reimu --config reimu.conf${extra}" 46
+Rerun the same install on another machine with:  reimu --config reimu.conf${extra}
+
+Reimu is made by Chidaruma. Like it? Visit github.com/Chidaruma696 and leave a star." 46
   if ! (( ASSUME_YES )) && ! (( DRY_RUN )); then
     if ask_yesno "Reboot now?" y; then reboot; fi
   fi
