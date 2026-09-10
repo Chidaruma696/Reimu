@@ -507,7 +507,9 @@ wizard() {
   if [[ -z "$REIMU_USER" ]]; then
     ui_box "Welcome" "Reimu asks a few questions, explains each one, and then installs Arch Linux from start to finish: base system, desktop, drivers, the lot.
 Your answers pile up on the left as you go. Esc in any question goes back to the previous one; the menu at the end lets you change any single answer.
-Nothing is written to the disk until you see the summary and type YES." 196
+Nothing is written to the disk until you see the summary and type YES.
+
+Made by Chidaruma · github.com/Chidaruma696" 196
     wiz_guided
   fi
   while true; do

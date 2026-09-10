@@ -185,6 +185,8 @@ help_aur() {
 The AUR is the community repository with thousands of extra programs (Spotify,
 Google Chrome, fonts…). An AUR helper installs them like normal packages.
 paru and yay are equivalent; paru is the more modern one.
+WARNING: AUR packages are recipes written by other users, not by Arch. Read the
+PKGBUILD before building anything you do not know.
 EOF
 }
 
@@ -231,6 +233,11 @@ Repositories are the sources pacman installs from. Arch's own are always on.
 • Chaotic-AUR: a community repository with thousands of AUR programs already
   compiled (browsers, editors, games, fonts…) so you install them in seconds
   instead of building them. Widely used; maintained by Arch community members.
+WARNING: anything outside the official repositories (Chaotic-AUR, custom repos,
+the AUR itself) is not reviewed by Arch Linux. A package from there can break an
+update or contain anything. Enable only what you understand. More sources
+(Liquorix, BlackArch, ALHP, Flatpak, Snap) can be enabled later from Sanae's
+Settings, with the same warning.
 EOF
 }
 
