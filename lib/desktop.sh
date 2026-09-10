@@ -161,6 +161,7 @@ theme_name() {
 # XFCE reads these files on the user's first login: no session needed.
 desktop_apply_theme() {
   [[ "$REIMU_DESKTOP" == xfce ]] || return 0
+  [[ "$REIMU_THEME" == default && "$REIMU_ICONS" == default ]] && return 0
   local gtk icons
   gtk="$(theme_name "${THEMES[$REIMU_THEME]:-${THEMES[default]}}")"
   icons="$(theme_name "${ICONS[$REIMU_ICONS]:-${ICONS[default]}}")"

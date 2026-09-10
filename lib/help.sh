@@ -249,5 +249,6 @@ A theme changes how windows, buttons and menus look; icons change the pictures
 in menus and file managers. Reimu installs the packages and sets them as the
 default for your user, so XFCE already looks like that at the first login.
 "AUR" themes need the AUR helper from the Software section (paru or yay).
+This is optional: say No and XFCE stays exactly as it ships.
 EOF
 }

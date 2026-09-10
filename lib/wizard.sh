@@ -273,6 +273,9 @@ q_dm() {
 q_theme() {
   [[ "$REIMU_DESKTOP" == xfce ]] || { ui_note "Themes are applied automatically for XFCE only (for now)."; return 0; }
   ui_help "$(help_theme)"
+  if ! ask_yesno "Do you want Reimu to set a theme and icons? (No leaves XFCE as it comes)" "$( [[ "$REIMU_THEME" != default || "$REIMU_ICONS" != default ]] && echo y || echo n )"; then
+    REIMU_THEME=default; REIMU_ICONS=default; return 0
+  fi
   ask_choice REIMU_THEME "Theme" "$REIMU_THEME" \
     "greybird|Greybird|XFCE's classic · light or dark · AUR" \
     "arc|Arc|Flat with transparency · the popular one · AUR" \
@@ -350,6 +353,12 @@ wiz_guided() {
   step "Software"; q_aur; q_bundles; q_extra_packages; q_services
 }
 
+wiz_theme_value() {
+  if [[ "$REIMU_DESKTOP" != xfce ]]; then printf 'xfce only'
+  elif [[ "$REIMU_THEME" == default && "$REIMU_ICONS" == default ]]; then printf 'as it comes'
+  else printf '%s %s · %s' "$REIMU_THEME" "$REIMU_THEME_VARIANT" "$REIMU_ICONS"; fi
+}
+
 wiz_disk_value() {
   if [[ "$REIMU_DISK_MODE" == auto ]]; then printf 'auto · %s' "${REIMU_DISK:-?}"
   else printf 'manual · root %s' "${REIMU_PART_ROOT:-?}"; fi
@@ -391,7 +400,7 @@ Nothing is written to the disk until you see the summary and type YES." 196
       "custom_repos|Custom repositories|${REIMU_CUSTOM_REPOS:-none}" \
       "desktop|Desktop|$REIMU_DESKTOP" \
       "dm|Login manager|$REIMU_DISPLAY_MANAGER" \
-      "theme|Theme and icons|$( [[ "$REIMU_DESKTOP" == xfce ]] && printf '%s %s · %s' "$REIMU_THEME" "$REIMU_THEME_VARIANT" "$REIMU_ICONS" || printf 'xfce only' )" \
+      "theme|Theme and icons|$(wiz_theme_value)" \
       "gpu|Graphics driver|$REIMU_GPU" \
       "aur|AUR helper|$REIMU_AUR" \
       "bundles|Software bundles|${REIMU_CATALOG:-none}" \
