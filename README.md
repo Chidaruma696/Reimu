@@ -59,7 +59,7 @@ curl -L https://github.com/Chidaruma696/Reimu/tarball/main | tar xz
 cd Chidaruma696-Reimu-*/ && ./reimu
 ```
 
-Reimu opens a Calamares-style layout in tmux: the questions and progress on the left, the list of phases at the top right and the live log at the bottom right (`--no-tmux` for a single pane). The interface itself uses [gum](https://github.com/charmbracelet/gum), fetched from the Arch repositories or straight from its release if the ISO's package database is stale, with plain prompts as a last resort. The first run walks through every question with an explanation box above it. After that you land on a menu with every single setting and its current value: change one, save the configuration, or start.
+Reimu opens a Calamares-style layout in tmux: the questions and progress on the left, the list of phases at the top right and the live log at the bottom right (`--no-tmux` for a single pane). The interface itself uses [gum](https://github.com/charmbracelet/gum) 0.17.0, fetched as a static binary from its release (gum 2.0, the one in the repositories, has a broken space bar in lists: [gum#1143](https://github.com/charmbracelet/gum/issues/1143)), with the repository package and then plain prompts as fallbacks. The first run walks through every question with an explanation box above it. After that you land on a menu with every single setting and its current value: change one, save the configuration, or start.
 
 ```
 Everything Reimu will do · pick a line to change it

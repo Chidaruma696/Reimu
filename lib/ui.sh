@@ -18,7 +18,7 @@ UI_GUM=0
 UI_WIDTH=78
 # Set to 1 when the user pressed Esc in a gum prompt: the guided flow steps back one question.
 UI_BACK=0
-GUM_VERSION="2.0.0"
+GUM_VERSION="0.17.0"
 
 # Reimu's palette for gum: shrine red, paper white, dim grey.
 ui_theme() {
@@ -33,33 +33,46 @@ ui_theme() {
   export GUM_SPIN_SPINNER_FOREGROUND=196 GUM_SPIN_TITLE_FOREGROUND=252
 }
 
-# Called once at start. Gets gum on the ISO if it is missing.
+# Which key marks an option in multi-select lists ("SPACE", or "TAB" on a gum whose space bar is broken).
+UI_MARK_KEY="SPACE"
+
+# Called once at start. Gets gum for the interface.
+#
+# gum 2.0 (the one in the Arch repositories since August 2026) has a bug: the
+# space bar does not mark options in multi-select lists (charmbracelet/gum#1143).
+# Reimu therefore fetches the last good release, 0.17.0, as a static binary and
+# uses that; the repository package is only a fallback, with Tab as the mark key.
 ui_init() {
   if [[ ! -t 0 || ! -t 1 ]]; then
     UI_GUM=0; return 0
   fi
-  if ! has gum && ! (( DRY_RUN )); then
-    printf '%s◆%s Preparing the interface (fetching gum)…\n' "$C_MAGENTA" "$C_RESET"
-    if has pacman; then
-      pacman -Sy --noconfirm --needed gum >> "$REIMU_LOG" 2>&1 || true
-    fi
-    if ! has gum && has curl; then
-      # Static binary straight from the release; works even when the ISO's package database is stale.
-      local arch tgz dir="/tmp/reimu-gum"
+  local cols; cols="$(tput cols 2>/dev/null || echo 80)"
+  (( cols - 4 < UI_WIDTH )) && UI_WIDTH=$(( cols - 4 ))
+  if ! (( DRY_RUN )); then
+    local dir="/tmp/reimu-gum"
+    if [[ ! -x "$dir/gum" ]] && has curl; then
+      printf '%s◆%s Preparing the interface (fetching gum %s)…\n' "$C_MAGENTA" "$C_RESET" "$GUM_VERSION"
+      local arch tgz
       case "$(uname -m)" in x86_64) arch=x86_64 ;; aarch64) arch=arm64 ;; *) arch="" ;; esac
       if [[ -n "$arch" ]]; then
         tgz="https://github.com/charmbracelet/gum/releases/download/v${GUM_VERSION}/gum_${GUM_VERSION}_Linux_${arch}.tar.gz"
         mkdir -p "$dir"
-        if curl -fsSL --max-time 60 "$tgz" | tar xz -C "$dir" --strip-components=1 2>> "$REIMU_LOG"; then
-          chmod +x "$dir/gum" 2>/dev/null; export PATH="$dir:$PATH"
-        fi
+        curl -fsSL --max-time 90 "$tgz" | tar xz -C "$dir" --strip-components=1 2>> "$REIMU_LOG" || rm -f "$dir/gum"
+        chmod +x "$dir/gum" 2>/dev/null || true
       fi
     fi
+    if [[ -x "$dir/gum" ]]; then
+      export PATH="$dir:$PATH"
+    elif ! has gum && has pacman; then
+      printf '%s◆%s Fetching gum from the repositories…\n' "$C_MAGENTA" "$C_RESET"
+      pacman -Sy --noconfirm --needed gum >> "$REIMU_LOG" 2>&1 || true
+    fi
   fi
-  local cols; cols="$(tput cols 2>/dev/null || echo 80)"
-  (( cols - 4 < UI_WIDTH )) && UI_WIDTH=$(( cols - 4 ))
   if has gum; then
     UI_GUM=1; ui_theme
+    case "$(gum --version 2>/dev/null)" in
+      *" 2."*|*"v2."*) UI_MARK_KEY="TAB"; warn "This gum has a broken space bar in lists: mark options with TAB (or x) instead." ;;
+    esac
   else
     UI_GUM=0
     warn "gum could not be fetched (no network?). Using plain prompts: type the number of an option and press Enter."
@@ -303,7 +316,7 @@ ask_multi() {
       (( on[i] )) && selected+="${selected:+,}${shown[$i]}"
     done
     local h=${#opts[@]}; (( h > 16 )) && h=16
-    local header="$prompt  ·  SPACE marks [x] each one you want · ENTER when done · Esc goes back" rc=0 tries=0
+    local header="$prompt  ·  $UI_MARK_KEY marks [x] each one you want · ENTER when done · Esc goes back" rc=0 tries=0
     while true; do
       sel=()
       mapfile -t sel < <(gum choose --no-limit --header "$header" --height "$h" --label-delimiter $'\t' ${selected:+--selected "$selected"} "${opts[@]}"; printf '%s\n' "__rc__$?")
@@ -312,7 +325,7 @@ ask_multi() {
       (( ${#sel[@]} )) && break
       tries=$((tries+1))
       (( tries >= 2 )) && break
-      header="NOTHING WAS MARKED. Move to an option and press SPACE: it turns into [x]. Then ENTER. Mark [none] to pick nothing"
+      header="NOTHING WAS MARKED. Move to an option and press $UI_MARK_KEY: it turns into [x]. Then ENTER. Mark [none] to pick nothing"
     done
     if (( UI_BACK )); then
       local -a keep=()
