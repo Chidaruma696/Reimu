@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # Reimu · core: logging, command execution, dry-run, safety helpers.
 
-REIMU_VERSION="0.6.0"
+REIMU_VERSION="0.7.0"
 REIMU_RUN_DIR="${REIMU_RUN_DIR:-/run/reimu}"
 REIMU_LOG="${REIMU_LOG:-/var/log/reimu.log}"
 REIMU_MNT="${REIMU_MNT:-/mnt}"

@@ -60,6 +60,8 @@ cd Chidaruma696-Reimu-*/ && ./reimu
 
 Reimu opens a Calamares-style layout in tmux: the questions and progress on the left, the list of phases at the top right and the live log at the bottom right (`--no-tmux` for a single pane). The interface itself uses [gum](https://github.com/charmbracelet/gum) 0.17.0, fetched as a static binary from its release (gum 2.0, the one in the repositories, has a broken space bar in lists: [gum#1143](https://github.com/charmbracelet/gum/issues/1143)), with the repository package and then plain prompts as fallbacks. The first run walks through every question with an explanation box above it. After that you land on a menu with every single setting and its current value: change one, save the configuration, or start.
 
+The interface comes in English, Spanish, German, French, Italian, Portuguese, Japanese and Russian: the first question picks the language (or `--lang de`), and it follows `LANG` by default. The Japanese and Russian texts were written with care but not by native speakers: corrections are welcome. Adding a language is one file, `lib/lang/<code>.sh`, registered in `lib/i18n.sh`.
+
 ```
 Everything Reimu will do · pick a line to change it
   Keyboard layout              la-latin1
@@ -180,7 +182,6 @@ The dry run works on any machine with Bash 5 and shows the exact commands a real
 - Hibernation with a swap partition or file (`resume=` on the kernel line).
 - Booting into snapshots with Limine (limine-snapper-sync).
 - LVM on LUKS and dual-boot aware manual layouts.
-- Spanish and Japanese interface.
 
 <br/>
 
