@@ -17,6 +17,7 @@ PHASES=(
   "desktop|Desktop and graphics|desktop_install"
   "aur|AUR helper|sw_aur_helper"
   "bundles|Software bundles|sw_install_bundles"
+  "sanae|Sanae software store|sw_sanae"
   "finish|Finishing touches|apply_finish"
 )
 
@@ -39,7 +40,7 @@ apply_summary() {
   body+="$(printf '%-12s %s' "Network" "$REIMU_NETWORK$( [[ "$REIMU_BLUETOOTH" != no ]] && printf ' · bluetooth' )$( [[ "$REIMU_PRINTING" == yes ]] && printf ' · printing' )$( [[ "$REIMU_FIREWALL" != no ]] && printf ' · %s' "$REIMU_FIREWALL" )$( [[ "$REIMU_SSH" == yes ]] && printf ' · sshd' )$( [[ "$REIMU_MULTILIB" == yes ]] && printf ' · multilib' )")"$'\n'
   body+="$(printf '%-12s %s' "Repos" "${REIMU_REPOS:-none}${REIMU_CUSTOM_REPOS:+ · $REIMU_CUSTOM_REPOS}")"$'\n'
   body+="$(printf '%-12s %s' "Desktop" "$REIMU_DESKTOP$( [[ "$REIMU_DESKTOP" != none ]] && printf ' · %s' "$(desktop_display_manager)" ) · gpu $REIMU_GPU")"$'\n'
-  body+="$(printf '%-12s %s' "Software" "aur $REIMU_AUR · ${REIMU_CATALOG:-no bundles}${REIMU_EXTRA_PACKAGES:+ · $REIMU_EXTRA_PACKAGES}")"
+  body+="$(printf '%-12s %s' "Software" "aur $REIMU_AUR · ${REIMU_CATALOG:-no bundles}${REIMU_EXTRA_PACKAGES:+ · $REIMU_EXTRA_PACKAGES}$( [[ "$REIMU_SANAE" == yes ]] && printf ' · Sanae' )")"
   ui_box "Summary" "$body" 196
 }
 
@@ -117,6 +118,7 @@ apply_finish() {
 
 apply_goodbye() {
   local extra=""
+  [[ "$REIMU_SANAE" == yes ]] && extra+=$'\n'"Sanae is installed: type sanae after logging in to browse and install software (experimental)."
   [[ -n "$FAILED_PACKAGES" ]] && extra+=$'\n'"Packages that could not be installed (install them later by hand):$FAILED_PACKAGES"
   ui_box "Arch Linux is installed" "Take the USB out and reboot.
 Your recipe is at /root/reimu.conf and the log at /var/log/reimu/install.log.

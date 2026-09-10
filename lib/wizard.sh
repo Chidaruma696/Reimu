@@ -337,6 +337,16 @@ q_bundles() {
   ask_multi REIMU_CATALOG "Software bundles" "$REIMU_CATALOG" "${cats[@]}"
 }
 
+q_sanae() {
+  ui_help "$(help_sanae)"
+  if ask_yesno "Install Sanae, the software store for the terminal? (experimental)" "$( [[ "$REIMU_SANAE" == no ]] && echo n || echo y )"; then
+    REIMU_SANAE=yes
+  else
+    REIMU_SANAE=no
+  fi
+  return 0
+}
+
 q_extra_packages() { ask_optional REIMU_EXTRA_PACKAGES "Extra packages, space separated" "$REIMU_EXTRA_PACKAGES" "Enter to skip · e.g. neovim htop"; }
 q_services()       { ask_optional REIMU_SERVICES "Extra systemd units to enable" "$REIMU_SERVICES" "Enter to skip · e.g. docker.service"; }
 
@@ -350,7 +360,7 @@ wiz_guided() {
   step "Network and services"; q_network; q_extras; q_power
   step "Repositories"; q_repos; q_custom_repos
   step "Desktop"; q_desktop; q_dm; q_theme; q_gpu
-  step "Software"; q_aur; q_bundles; q_extra_packages; q_services
+  step "Software"; q_aur; q_bundles; q_extra_packages; q_services; q_sanae
 }
 
 wiz_theme_value() {
@@ -406,6 +416,7 @@ Nothing is written to the disk until you see the summary and type YES." 196
       "bundles|Software bundles|${REIMU_CATALOG:-none}" \
       "extra_packages|Extra packages|${REIMU_EXTRA_PACKAGES:-none}" \
       "services|Extra services|${REIMU_SERVICES:-none}" \
+      "sanae|Sanae software store|$REIMU_SANAE" \
       "save|💾 Save configuration to a file|" \
       "install|🚀 Start the installation|" \
       "quit|✖ Quit|"

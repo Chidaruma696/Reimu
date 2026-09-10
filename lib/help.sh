@@ -252,3 +252,15 @@ default for your user, so XFCE already looks like that at the first login.
 This is optional: say No and XFCE stays exactly as it ships.
 EOF
 }
+
+help_sanae() {
+  cat <<'EOF'
+Sanae is a software store that runs in the terminal, made by the same author
+as Reimu: browse apps by shelf (Internet, Games, Office…) with human names and
+popularity, search the repositories and the AUR together, keep the system
+updated with the Arch news in front of you, and apply "recipes" that install
+and configure things in one go (Docker, QEMU, fonts, Japanese input, XFCE
+themes). It is experimental. It is a single binary in /usr/local/bin/sanae;
+remove it with: sudo rm /usr/local/bin/sanae
+EOF
+}

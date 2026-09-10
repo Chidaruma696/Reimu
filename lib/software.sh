@@ -114,3 +114,28 @@ sw_bundle_contents() {
   done < "$file"
   printf '%s' "${out# }"
 }
+
+# Sanae: the software store for the terminal (experimental). One static binary
+# from its latest release, plus the two tools it reads pacman through.
+SANAE_URL="https://github.com/Chidaruma696/Sanae/releases/latest/download/sanae-x86_64-linux"
+sw_sanae() {
+  [[ "$REIMU_SANAE" == yes ]] || return 0
+  msg "Sanae (experimental)"
+  chr_pkg expac pacman-contrib archlinux-appstream-data
+  if (( DRY_RUN )); then
+    printf '%s  $ curl -fsSL %s -o %s/usr/local/bin/sanae && chmod 755 …%s\n' "$C_DIM" "$SANAE_URL" "$REIMU_MNT" "$C_RESET"
+    return 0
+  fi
+  net_wait
+  local tmp="$REIMU_MNT/usr/local/bin/sanae.part"
+  mkdir -p "$REIMU_MNT/usr/local/bin"
+  if RUN_TITLE="Downloading Sanae" run_net curl -fsSL --max-time 120 "$SANAE_URL" -o "$tmp"; then
+    mv -f "$tmp" "$REIMU_MNT/usr/local/bin/sanae"
+    chmod 755 "$REIMU_MNT/usr/local/bin/sanae"
+    ok "Sanae installed: run 'sanae' after the first login."
+  else
+    rm -f "$tmp"
+    warn "Could not download Sanae; install it later from https://github.com/Chidaruma696/Sanae"
+  fi
+  return 0
+}
