@@ -23,10 +23,11 @@ GUM_VERSION="2.0.0"
 # Reimu's palette for gum: shrine red, paper white, dim grey.
 ui_theme() {
   export GUM_CHOOSE_CURSOR_FOREGROUND=196 GUM_CHOOSE_SELECTED_FOREGROUND=203 GUM_CHOOSE_HEADER_FOREGROUND=255
-  export GUM_CHOOSE_CURSOR="▸ " GUM_CHOOSE_SELECTED_PREFIX="◉ " GUM_CHOOSE_UNSELECTED_PREFIX="○ " GUM_CHOOSE_CURSOR_PREFIX="  "
-  export GUM_FILTER_INDICATOR="▸" GUM_FILTER_INDICATOR_FOREGROUND=196 GUM_FILTER_MATCH_FOREGROUND=203 GUM_FILTER_HEADER_FOREGROUND=255
+  # Plain ASCII marks: the console font of the ISO cannot draw fancy glyphs, and [x] is unambiguous.
+  export GUM_CHOOSE_CURSOR="> " GUM_CHOOSE_SELECTED_PREFIX="[x] " GUM_CHOOSE_UNSELECTED_PREFIX="[ ] " GUM_CHOOSE_CURSOR_PREFIX="[ ] "
+  export GUM_FILTER_INDICATOR=">" GUM_FILTER_INDICATOR_FOREGROUND=196 GUM_FILTER_MATCH_FOREGROUND=203 GUM_FILTER_HEADER_FOREGROUND=255
   export GUM_FILTER_PROMPT="🔍 " GUM_FILTER_PLACEHOLDER="type to search"
-  export GUM_INPUT_CURSOR_FOREGROUND=196 GUM_INPUT_HEADER_FOREGROUND=255 GUM_INPUT_PROMPT="▸ "
+  export GUM_INPUT_CURSOR_FOREGROUND=196 GUM_INPUT_HEADER_FOREGROUND=255 GUM_INPUT_PROMPT="> "
   export GUM_CONFIRM_PROMPT_FOREGROUND=255 GUM_CONFIRM_SELECTED_BACKGROUND=196 GUM_CONFIRM_SELECTED_FOREGROUND=255
   export GUM_CONFIRM_UNSELECTED_BACKGROUND=237 GUM_CONFIRM_UNSELECTED_FOREGROUND=250
   export GUM_SPIN_SPINNER_FOREGROUND=196 GUM_SPIN_TITLE_FOREGROUND=252
@@ -153,7 +154,7 @@ ask_text() {
   done
   _out="$ans"
   log "answer $1 = $ans"
-  (( UI_GUM )) && printf '  %s%s: %s%s\n' "$C_DIM" "$prompt" "$ans" "$C_RESET"
+  (( UI_GUM )) && printf '  %s[ok]%s %s: %s\n' "$C_GREEN" "$C_RESET" "$prompt" "$ans"
   return 0
 }
 
@@ -204,7 +205,7 @@ ask_yesno() {
     if [[ "$def" == y ]]; then gum confirm --default=true "$prompt"; else gum confirm --default=false "$prompt"; fi
     rc=$?
     if (( rc > 1 )); then UI_BACK=1; [[ "$def" == y ]]; rc=$?; fi
-    if (( rc == 0 )); then printf '  %s%s: yes%s\n' "$C_DIM" "$prompt" "$C_RESET"; else printf '  %s%s: no%s\n' "$C_DIM" "$prompt" "$C_RESET"; fi
+    if (( rc == 0 )); then printf '  %s[ok]%s %s: yes\n' "$C_GREEN" "$C_RESET" "$prompt"; else printf '  %s[ok]%s %s: no\n' "$C_GREEN" "$C_RESET" "$prompt"; fi
     return "$rc"
   fi
   [[ "$def" == y ]] && hint="Y/n" || hint="y/N"
@@ -250,7 +251,7 @@ ask_choice() {
     [[ -z "$ans" ]] && ans="$def"
     _out="$ans"
     log "answer $1 = $ans"
-    for i in "${!keys[@]}"; do [[ "${keys[$i]}" == "$ans" ]] && printf '  %s%s: %s%s\n' "$C_DIM" "$prompt" "${labels[$i]}" "$C_RESET"; done
+    for i in "${!keys[@]}"; do [[ "${keys[$i]}" == "$ans" ]] && printf '  %s[ok]%s %s: %s\n' "$C_GREEN" "$C_RESET" "$prompt" "${labels[$i]}"; done
     return 0
   fi
 
@@ -295,14 +296,14 @@ ask_multi() {
   if (( UI_GUM )); then
     # Like archinstall: space marks, enter continues. A "none" line lets you pick nothing,
     # because gum returns the highlighted line when nothing is marked.
-    local -a opts=("— none —"$'\t'"__none__") sel=()
+    local -a opts=("[none] pick nothing"$'\t'"__none__") sel=()
     local selected=""
     for i in "${!keys[@]}"; do
       opts+=("${shown[$i]}"$'\t'"${keys[$i]}")
       (( on[i] )) && selected+="${selected:+,}${shown[$i]}"
     done
     local h=${#opts[@]}; (( h > 16 )) && h=16
-    local header="$prompt  ·  SPACE marks each one you want · ENTER when done · Esc goes back" rc=0 tries=0
+    local header="$prompt  ·  SPACE marks [x] each one you want · ENTER when done · Esc goes back" rc=0 tries=0
     while true; do
       sel=()
       mapfile -t sel < <(gum choose --no-limit --header "$header" --height "$h" --label-delimiter $'\t' ${selected:+--selected "$selected"} "${opts[@]}"; printf '%s\n' "__rc__$?")
@@ -311,7 +312,7 @@ ask_multi() {
       (( ${#sel[@]} )) && break
       tries=$((tries+1))
       (( tries >= 2 )) && break
-      header="Nothing was marked. Press SPACE on each option (it shows ◉), then ENTER. Mark '— none —' to pick nothing"
+      header="NOTHING WAS MARKED. Move to an option and press SPACE: it turns into [x]. Then ENTER. Mark [none] to pick nothing"
     done
     if (( UI_BACK )); then
       local -a keep=()
@@ -323,7 +324,7 @@ ask_multi() {
     for i in "${!keys[@]}"; do has_word "${sel[*]}" "${keys[$i]}" && result+=("${keys[$i]}"); done
     _out="${result[*]}"
     log "answer $1 = ${_out}"
-    printf '  %s%s: %s%s\n' "$C_DIM" "$prompt" "${_out:-none}" "$C_RESET"
+    printf '  %s[ok]%s %s: %s\n' "$C_GREEN" "$C_RESET" "$prompt" "${_out:-none}"
     return 0
   fi
 
@@ -416,7 +417,7 @@ ask_filter() {
     [[ -z "$ans" ]] && ans="$def"
     _out="$ans"
     log "answer $var = $ans"
-    printf '  %s%s: %s%s\n' "$C_DIM" "$prompt" "$ans" "$C_RESET"
+    printf '  %s[ok]%s %s: %s\n' "$C_GREEN" "$C_RESET" "$prompt" "$ans"
     return 0
   fi
   ask_text "$var" "$prompt" "$def"
