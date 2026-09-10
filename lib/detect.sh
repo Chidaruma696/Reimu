@@ -133,5 +133,11 @@ list_timezones() {
 # "CODE|Country|mirrors" from reflector, for the mirror multi-select.
 list_countries() {
   has reflector || return 0
-  reflector --list-countries 2>/dev/null | awk 'NR>2 && $NF ~ /^[0-9]+$/ { code=$(NF-1); n=$NF; name=""; for(i=1;i<=NF-2;i++) name=name" "$i; sub(/^ /,"",name); printf "%s|%s|%s mirrors\n", code, name, n }'
+  local cache="${TMPDIR:-/tmp}/reimu-countries"
+  if [[ ! -s "$cache" ]]; then
+    reflector --list-countries 2>/dev/null > "$cache.tmp" && mv -f "$cache.tmp" "$cache"
+  fi
+  [[ -s "$cache" ]] || return 0
+  awk 'NR>2 && $NF ~ /^[0-9]+$/ { code=$(NF-1); n=$NF; name=""; for(i=1;i<=NF-2;i++) name=name" "$i; sub(/^ /,"",name); printf "%s|%s|%s mirrors\n", code, name, n }' "$cache"
 }
+

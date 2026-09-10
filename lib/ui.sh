@@ -16,6 +16,8 @@
 
 UI_GUM=0
 UI_WIDTH=78
+# Set to 1 when the user pressed Esc in a gum prompt: the guided flow steps back one question.
+UI_BACK=0
 GUM_VERSION="2.0.0"
 
 # Reimu's palette for gum: shrine red, paper white, dim grey.
@@ -91,7 +93,7 @@ ui_help() {
   [[ -n "$1" ]] || return 0
   (( ASSUME_YES )) && [[ -z "${REIMU_INTERACTIVE:-}" ]] && return 0
   if (( UI_GUM )); then
-    gum style --border rounded --border-foreground 240 --foreground 252 --padding "0 1" --margin "0 0 1 0" --width "$UI_WIDTH" "$1"
+    gum style --border normal --border-foreground 244 --foreground 252 --padding "0 1" --margin "0 0 1 0" --width "$UI_WIDTH" "$1"
   else
     printf '\n'
     printf '%s' "$1" | fold -s -w 80 | sed "s/^/  ${C_DIM}│ /; s/\$/${C_RESET}/"
@@ -103,7 +105,7 @@ ui_help() {
 ui_box() {
   local title="$1" body="$2" color="${3:-196}"
   if (( UI_GUM )); then
-    gum style --border double --border-foreground "$color" --padding "0 2" --margin "1 0" --width "$UI_WIDTH" "$(gum style --bold --foreground "$color" "$title")" "" "$body"
+    gum style --border normal --border-foreground "$color" --padding "0 2" --margin "1 0" --width "$UI_WIDTH" "$(gum style --bold --foreground "$color" "$title")" "" "$body"
   else
     printf '\n%s%s%s\n' "$C_BOLD" "$title" "$C_RESET"; hr; printf '%s\n' "$body"; hr
   fi
@@ -137,7 +139,9 @@ ask_text() {
   _ui_guard "$1"
   while true; do
     if (( UI_GUM )); then
-      ans="$(gum input --header "$prompt" --value "$def" --placeholder "$ph" --width 60)" || ans="$def"
+      ans="$(gum input --header "$prompt  ·  Esc goes back" --value "$def" --placeholder "$ph" --width 60)" || { ans="$def"; UI_BACK=1; }
+      [[ -z "$ans" ]] && ans="$def"
+      if (( UI_BACK )); then _out="$ans"; return 0; fi
     elif [[ -n "$def" ]]; then
       read -r -e -p "$(printf '%s?%s %s %s[%s]%s: ' "$C_CYAN" "$C_RESET" "$prompt" "$C_DIM" "$def" "$C_RESET")" ans
       ans="${ans:-$def}"
@@ -159,7 +163,7 @@ ask_optional() {
   local prompt="$2" def="${3:-}" ph="${4:-Enter to skip}" ans
   if (( ASSUME_YES )) && [[ -z "${REIMU_INTERACTIVE:-}" ]]; then _out="$def"; return 0; fi
   if (( UI_GUM )); then
-    ans="$(gum input --header "$prompt" --value "$def" --placeholder "$ph" --width 60)" || ans="$def"
+    ans="$(gum input --header "$prompt  ·  Esc goes back" --value "$def" --placeholder "$ph" --width 60)" || { ans="$def"; UI_BACK=1; }
   else
     read -r -e -p "$(printf '%s?%s %s %s[%s]%s: ' "$C_CYAN" "$C_RESET" "$prompt" "$C_DIM" "${def:-none}" "$C_RESET")" ans
     ans="${ans:-$def}"
@@ -199,7 +203,7 @@ ask_yesno() {
   if (( UI_GUM )); then
     if [[ "$def" == y ]]; then gum confirm --default=true "$prompt"; else gum confirm --default=false "$prompt"; fi
     rc=$?
-    (( rc == 130 )) && { [[ "$def" == y ]]; rc=$?; }
+    if (( rc > 1 )); then UI_BACK=1; [[ "$def" == y ]]; rc=$?; fi
     if (( rc == 0 )); then printf '  %s%s: yes%s\n' "$C_DIM" "$prompt" "$C_RESET"; else printf '  %s%s: no%s\n' "$C_DIM" "$prompt" "$C_RESET"; fi
     return "$rc"
   fi
@@ -242,7 +246,7 @@ ask_choice() {
     local -a opts=()
     for i in "${!keys[@]}"; do opts+=("${shown[$i]}"$'\t'"${keys[$i]}"); done
     local h=${#keys[@]}; (( h > 16 )) && h=16
-    ans="$(gum choose --header "$prompt" --height "$h" --label-delimiter $'\t' ${deflabel:+--selected "$deflabel"} "${opts[@]}")" || ans="$def"
+    ans="$(gum choose --header "$prompt  ·  Enter picks · Esc goes back" --height "$h" --label-delimiter $'\t' ${deflabel:+--selected "$deflabel"} "${opts[@]}")" || { ans="$def"; UI_BACK=1; }
     [[ -z "$ans" ]] && ans="$def"
     _out="$ans"
     log "answer $1 = $ans"
@@ -298,7 +302,23 @@ ask_multi() {
       (( on[i] )) && selected+="${selected:+,}${shown[$i]}"
     done
     local h=${#opts[@]}; (( h > 16 )) && h=16
-    mapfile -t sel < <(gum choose --no-limit --header "$prompt  ·  SPACE marks · ENTER continues" --height "$h" --label-delimiter $'\t' ${selected:+--selected "$selected"} "${opts[@]}") || sel=()
+    local header="$prompt  ·  SPACE marks each one you want · ENTER when done · Esc goes back" rc=0 tries=0
+    while true; do
+      sel=()
+      mapfile -t sel < <(gum choose --no-limit --header "$header" --height "$h" --label-delimiter $'\t' ${selected:+--selected "$selected"} "${opts[@]}"; printf '%s\n' "__rc__$?")
+      rc="${sel[-1]#__rc__}"; unset 'sel[-1]'
+      if (( rc != 0 )); then UI_BACK=1; break; fi
+      (( ${#sel[@]} )) && break
+      tries=$((tries+1))
+      (( tries >= 2 )) && break
+      header="Nothing was marked. Press SPACE on each option (it shows ◉), then ENTER. Mark '— none —' to pick nothing"
+    done
+    if (( UI_BACK )); then
+      local -a keep=()
+      for i in "${!keys[@]}"; do (( on[i] )) && keep+=("${keys[$i]}"); done
+      _out="${keep[*]}"
+      return 0
+    fi
     local -a result=()
     for i in "${!keys[@]}"; do has_word "${sel[*]}" "${keys[$i]}" && result+=("${keys[$i]}"); done
     _out="${result[*]}"
@@ -353,7 +373,7 @@ ask_menu() {
       opts+=("$(printf '%-28s %s' "${labels[$i]}" "$(_ui_clean "${values[$i]}")")"$'\t'"${keys[$i]}")
     done
     local h=${#keys[@]}; (( h > 22 )) && h=22
-    ans="$(gum choose --header "$title" --height "$h" --label-delimiter $'\t' "${opts[@]}")" || ans="quit"
+    ans="$(gum choose --header "$title" --height "$h" --label-delimiter $'\t' "${opts[@]}")" || ans="__again__"
     _out="$ans"
     return 0
   fi
@@ -392,7 +412,7 @@ ask_filter() {
     local l
     [[ -n "$def" ]] && ordered+=("$def")
     for l in "${lines[@]}"; do [[ "$l" == "$def" ]] || ordered+=("$l"); done
-    ans="$(printf '%s\n' "${ordered[@]}" | gum filter --header "$prompt  ·  type to search, enter picks" --height 12 --fuzzy)" || ans="$def"
+    ans="$(printf '%s\n' "${ordered[@]}" | gum filter --header "$prompt  ·  type to search · Enter picks · Esc goes back" --height 12 --fuzzy)" || { ans="$def"; UI_BACK=1; }
     [[ -z "$ans" ]] && ans="$def"
     _out="$ans"
     log "answer $var = $ans"
