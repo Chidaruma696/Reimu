@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # Reimu · core: logging, command execution, dry-run, safety helpers.
 
-REIMU_VERSION="0.5.7"
+REIMU_VERSION="0.6.0"
 REIMU_RUN_DIR="${REIMU_RUN_DIR:-/run/reimu}"
 REIMU_LOG="${REIMU_LOG:-/var/log/reimu.log}"
 REIMU_MNT="${REIMU_MNT:-/mnt}"
@@ -35,7 +35,7 @@ err()  { printf '%s✖%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; log "ERROR: $*"; }
 die()  { err "$*"; exit 1; }
 
 step() {
-  printf '\n%s%s══ %s ══%s\n' "$C_BOLD" "$C_CYAN" "$*" "$C_RESET"
+  printf '\n%s%s══ %s ══%s\n' "$C_BOLD" "$C_CYAN" "$(t "$*")" "$C_RESET"
   log "==== $* ===="
 }
 
@@ -109,7 +109,7 @@ run_recover() {
       # The prompt itself failed or was escaped: never loop on a broken interface.
       if (( UI_GUM )); then
         UI_GUM=0; UI_BACK=0
-        warn "The interface tool failed; switching to plain prompts."
+        warn "$(t "The interface tool failed; switching to plain prompts.")"
         continue
       fi
       what=abort
@@ -117,9 +117,9 @@ run_recover() {
     case "$what" in
       retry)
         if RUN_NO_RECOVER=1 run "$@"; then return 0; fi
-        warn "Still failing. Pick again." ;;
-      skip) warn "Skipped: $*"; return 0 ;;
-      shell) printf '%sType exit to return to Reimu.%s\n' "$C_YELLOW" "$C_RESET"; bash -i || true ;;
+        warn "$(t "Still failing. Pick again.")" ;;
+      skip) warn "$(tf "Skipped: %s" "$*")"; return 0 ;;
+      shell) printf '%s%s%s\n' "$C_YELLOW" "$(t 'Type exit to return to Reimu.')" "$C_RESET"; bash -i || true ;;
       abort) die "Aborted by the user. Resume later with: reimu --resume" ;;
     esac
   done
@@ -129,14 +129,14 @@ run_recover() {
 net_wait() {
   (( DRY_RUN )) && return 0
   network_ok && return 0
-  warn "No internet connection. Waiting for it to come back… (Ctrl+C aborts)"
+  warn "$(t "No internet connection. Waiting for it to come back… (Ctrl+C aborts)")"
   local frames='|/-' i=0
   until network_ok; do
-    printf '\r\033[K  %s%s%s Waiting for the network…' "$C_MAGENTA" "${frames:i%3:1}" "$C_RESET"
+    printf '\r\033[K  %s%s%s %s' "$C_MAGENTA" "${frames:i%3:1}" "$C_RESET" "$(t 'Waiting for the network…')"
     i=$((i+1)); sleep 3
   done
   printf '\r\033[K'
-  ok "Network is back."
+  ok "$(t "Network is back.")"
 }
 
 # run for commands that download: waits for the network and retries.
@@ -145,7 +145,7 @@ run_net() {
   for attempt in 1 2 3 4 5; do
     net_wait
     if run "$@"; then return 0; fi
-    warn "Attempt $attempt of 5 failed; retrying in 10 s…"
+    warn "$(tf "Attempt %s of 5 failed; retrying in 10 s…" "$attempt")"
     sleep 10
   done
   err "Gave up after 5 attempts: $*"

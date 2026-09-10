@@ -5,7 +5,7 @@ USER_PASSWORD=""; ROOT_PASSWORD=""
 
 sys_ask_passwords() {
   export REIMU_INTERACTIVE=1
-  [[ -n "$USER_PASSWORD" ]] || ask_secret USER_PASSWORD "Password for $REIMU_USER"
+  [[ -n "$USER_PASSWORD" ]] || ask_secret USER_PASSWORD "$(tf "Password for %s" "$REIMU_USER")"
   if [[ "$REIMU_ROOT_LOGIN" == yes && -z "$ROOT_PASSWORD" ]]; then
     ask_secret ROOT_PASSWORD "Password for root"
   fi

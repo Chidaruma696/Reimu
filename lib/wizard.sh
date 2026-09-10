@@ -7,6 +7,17 @@
 
 # ---- language, keyboard, time ---------------------------------------------
 
+q_ui_language() {
+  local -a items=()
+  local l
+  for l in "${I18N_LANGS[@]}"; do items+=("${l%%|*}|${l#*|}|"); done
+  ask_choice REIMU_UI_LANG "Language / Idioma" "$REIMU_UI_LANG" "${items[@]}"
+  i18n_load "$REIMU_UI_LANG"
+  WIZ_LANG_ASKED=1
+  return 0
+}
+
+
 q_keymap()   { ui_help "$(help_locale)"; ask_filter REIMU_KEYMAP "Console keyboard layout" "$REIMU_KEYMAP" list_keymaps; }
 q_locale()   { ask_filter REIMU_LOCALE "System language (locale)" "$REIMU_LOCALE" list_locales; }
 q_extra_locales() {
@@ -44,7 +55,7 @@ q_disk() {
   while IFS= read -r d; do
     [[ -z "$d" ]] && continue
     name="${d%%|*}"; rest="${d#*|}"; size="${rest%%|*}"; model="${rest#*|}"
-    tag=""; is_live_media "$name" && tag=" (live media · do not use)"
+    tag=""; is_live_media "$name" && tag=" ($(t "live media · do not use"))"
     items+=("$name|$name|$size  $model$tag")
   done < <(list_disks)
   (( ${#items[@]} )) || die "No disks found."
@@ -52,7 +63,7 @@ q_disk() {
   ask_choice REIMU_DISK "Target disk" "$REIMU_DISK" "${items[@]}"
   is_live_media "$REIMU_DISK" && die "That disk is the live media you booted from."
   if [[ "$REIMU_DISK_MODE" == manual ]]; then
-    if ask_yesno "Open cfdisk on $REIMU_DISK now to create the partitions?" y; then
+    if ask_yesno "$(tf "Open cfdisk on %s now to create the partitions?" "$REIMU_DISK")" y; then
       run_tty cfdisk "$REIMU_DISK"
     fi
     q_partitions
@@ -77,7 +88,7 @@ q_partitions() {
   ask_choice REIMU_PART_HOME "Separate /home partition" "${REIMU_PART_HOME:-none}" "none|None|Home lives inside root" "${parts[@]}"
   [[ "$REIMU_PART_HOME" == none ]] && REIMU_PART_HOME=""
   if [[ -n "$REIMU_PART_HOME" ]]; then
-    ask_yesno "Format $REIMU_PART_HOME? (No keeps the existing files)" n && REIMU_FORMAT_HOME=yes || REIMU_FORMAT_HOME=no
+    ask_yesno "$(tf "Format %s? (No keeps the existing files)" "$REIMU_PART_HOME")" n && REIMU_FORMAT_HOME=yes || REIMU_FORMAT_HOME=no
   fi
   ask_choice REIMU_PART_SWAP "Swap partition" "${REIMU_PART_SWAP:-none}" "none|None|" "${parts[@]}"
   [[ "$REIMU_PART_SWAP" == none ]] && REIMU_PART_SWAP=""
@@ -119,13 +130,13 @@ q_swap() {
   case "$REIMU_SWAP" in
     zram)
       ask_choice REIMU_SWAP_SIZE "zram size" "${REIMU_SWAP_SIZE:-$(suggest_zram_mib)}" \
-        "$(suggest_zram_mib)|$(suggest_zram_mib) MiB|Half of your RAM · recommended" \
+        "$(suggest_zram_mib)|$(tf "%s MiB" "$(suggest_zram_mib)")|Half of your RAM · recommended" \
         "2048|2 GiB|" "4096|4 GiB|" "8192|8 GiB|" "custom|Custom|Type a size in MiB"
       [[ "$REIMU_SWAP_SIZE" == custom ]] && ask_text REIMU_SWAP_SIZE "zram size in MiB" "$(suggest_zram_mib)" ;;
     partition|file)
       ask_choice REIMU_SWAP_SIZE "Swap size" "${REIMU_SWAP_SIZE:-$(suggest_swap_gib)}" \
-        "$(suggest_swap_gib)|$(suggest_swap_gib) GiB|Recommended for your ${gib} GiB of RAM" \
-        "$(( gib + 2 ))|$(( gib + 2 )) GiB|RAM plus 2 · safe for hibernation" \
+        "$(suggest_swap_gib)|$(tf "%s GiB" "$(suggest_swap_gib)")|$(tf "Recommended for your %s GiB of RAM" "$gib")" \
+        "$(( gib + 2 ))|$(tf "%s GiB" "$(( gib + 2 ))")|RAM plus 2 · safe for hibernation" \
         "4|4 GiB|" "8|8 GiB|" "16|16 GiB|" "custom|Custom|Type a size in GiB"
       [[ "$REIMU_SWAP_SIZE" == custom ]] && ask_text REIMU_SWAP_SIZE "Swap size in GiB" "$(suggest_swap_gib)" ;;
     none) REIMU_SWAP_SIZE="" ;;
@@ -256,8 +267,8 @@ q_desktop() {
   if [[ "$REIMU_DESKTOP" == none ]]; then
     REIMU_DISPLAY_MANAGER=none
   else
-    ui_box "What $REIMU_DESKTOP installs" "$(desktop_packages "$REIMU_DESKTOP" | tr ' ' '\n' | paste -sd ' ')
-plus, with every desktop: ${DESKTOP_COMMON[*]}" 240
+    ui_box "$(tf "What %s installs" "$REIMU_DESKTOP")" "$(desktop_packages "$REIMU_DESKTOP" | tr ' ' '\n' | paste -sd ' ')
+$(t "plus, with every desktop:") ${DESKTOP_COMMON[*]}" 240
   fi
   return 0
 }
@@ -299,7 +310,7 @@ q_theme() {
   if [[ "$REIMU_AUR" == none ]]; then
     local t="${THEMES[$REIMU_THEME]:-}" i="${ICONS[$REIMU_ICONS]:-}"
     if [[ "$(theme_field "$t" 2)" == aur || "$(theme_field "$i" 2)" == aur ]]; then
-      warn "That theme comes from the AUR: pick an AUR helper in Software, or it will be skipped."
+      warn "$(t "That theme comes from the AUR: pick an AUR helper in Software, or it will be skipped.")"
     fi
   fi
   return 0
@@ -308,7 +319,7 @@ q_theme() {
 q_gpu() {
   ui_help "$(help_gpu)"
   ask_choice REIMU_GPU "Graphics driver" "$REIMU_GPU" \
-    "auto|Detect|Found: $DETECT_GPU · recommended" "intel|Intel|" "amd|AMD|" \
+    "auto|Detect|$(tf "Found: %s · recommended" "$DETECT_GPU")" "intel|Intel|" "amd|AMD|" \
     "nvidia|NVIDIA open modules|GTX 16xx · RTX · 2018 onwards" \
     "nvidia-proprietary|NVIDIA proprietary|Older cards" "nouveau|nouveau|Free NVIDIA driver · slow" \
     "vm|Virtual machine|Guest tools" "none|None|"
@@ -333,7 +344,7 @@ q_bundles() {
   done
   (( ${#cats[@]} )) || return 0
   ui_help "$(help_bundles)"
-  ui_box "What each bundle installs" "${contents%$'\n'}" 240
+  ui_box "$(t "What each bundle installs")" "${contents%$'\n'}" 240
   ask_multi REIMU_CATALOG "Software bundles" "$REIMU_CATALOG" "${cats[@]}"
 }
 
@@ -356,6 +367,7 @@ q_services()       { ask_optional REIMU_SERVICES "Extra systemd units to enable"
 
 # id|Group|Label. Order = order of the guided run and of the menu.
 SETTINGS=(
+  "ui_language|Language|Interface language"
   "keymap|Language|Keyboard layout"
   "locale|Language|Language"
   "extra_locales|Language|Extra languages"
@@ -393,6 +405,7 @@ SETTINGS=(
 # Questions the guided run skips because they only apply sometimes (they stay reachable from the menu).
 wiz_skip() {
   case "$1" in
+    ui_language) [[ -n "${WIZ_LANG_ASKED:-}" ]] ;;
     partitions) [[ "$REIMU_DISK_MODE" != manual ]] ;;
     snapshots) [[ "$REIMU_FS" != btrfs ]] ;;
     power) ! (( DETECT_LAPTOP )) ;;
@@ -403,14 +416,15 @@ wiz_skip() {
 
 wiz_value() {
   case "$1" in
+    ui_language) local l; for l in "${I18N_LANGS[@]}"; do [[ "${l%%|*}" == "$REIMU_UI_LANG" ]] && printf '%s' "${l#*|}"; done ;;
     keymap) printf '%s' "$REIMU_KEYMAP" ;;
     locale) printf '%s' "$REIMU_LOCALE" ;;
-    extra_locales) printf '%s' "${REIMU_EXTRA_LOCALES:-none}" ;;
+    extra_locales) printf '%s' "${REIMU_EXTRA_LOCALES:-$(t none)}" ;;
     timezone) printf '%s' "$REIMU_TIMEZONE" ;;
     hostname) printf '%s' "$REIMU_HOSTNAME" ;;
-    mirrors) printf '%s' "${REIMU_MIRROR_COUNTRIES:-worldwide}" ;;
+    mirrors) printf '%s' "${REIMU_MIRROR_COUNTRIES:-$(t worldwide)}" ;;
     disk) wiz_disk_value ;;
-    partitions) if [[ "$REIMU_DISK_MODE" == manual ]]; then printf 'boot %s · root %s' "$REIMU_PART_BOOT" "$REIMU_PART_ROOT"; else printf 'automatic'; fi ;;
+    partitions) if [[ "$REIMU_DISK_MODE" == manual ]]; then tf 'boot %s · root %s' "$REIMU_PART_BOOT" "$REIMU_PART_ROOT"; else t automatic; fi ;;
     fs) printf '%s' "$REIMU_FS" ;;
     snapshots) printf '%s' "$REIMU_SNAPSHOTS" ;;
     encrypt) printf '%s' "$REIMU_ENCRYPT" ;;
@@ -420,7 +434,7 @@ wiz_value() {
     user) printf '%s' "$REIMU_USER" ;;
     shell) printf '%s' "$REIMU_USER_SHELL" ;;
     sudo) printf '%s' "$REIMU_SUDO" ;;
-    root) if [[ "$REIMU_ROOT_LOGIN" == yes ]]; then printf 'own password'; else printf 'locked'; fi ;;
+    root) if [[ "$REIMU_ROOT_LOGIN" == yes ]]; then t 'own password'; else t locked; fi ;;
     network) printf '%s' "$REIMU_NETWORK" ;;
     extras)
       local v=""
@@ -428,18 +442,18 @@ wiz_value() {
       [[ "$REIMU_PRINTING" == yes ]] && v+="printing "
       [[ "$REIMU_FIREWALL" != no ]] && v+="$REIMU_FIREWALL "
       [[ "$REIMU_SSH" == yes ]] && v+="ssh"
-      printf '%s' "${v:-none}" ;;
-    power) if (( DETECT_LAPTOP )); then printf '%s' "$REIMU_POWER"; else printf 'not a laptop'; fi ;;
-    repos) printf '%s' "${REIMU_REPOS:-none}" ;;
-    custom_repos) printf '%s' "${REIMU_CUSTOM_REPOS:-none}" ;;
+      printf '%s' "${v:-$(t none)}" ;;
+    power) if (( DETECT_LAPTOP )); then printf '%s' "$REIMU_POWER"; else t 'not a laptop'; fi ;;
+    repos) printf '%s' "${REIMU_REPOS:-$(t none)}" ;;
+    custom_repos) printf '%s' "${REIMU_CUSTOM_REPOS:-$(t none)}" ;;
     desktop) printf '%s' "$REIMU_DESKTOP" ;;
     dm) printf '%s' "$REIMU_DISPLAY_MANAGER" ;;
     theme) wiz_theme_value ;;
     gpu) printf '%s' "$REIMU_GPU" ;;
     aur) printf '%s' "$REIMU_AUR" ;;
-    bundles) printf '%s' "${REIMU_CATALOG:-none}" ;;
-    extra_packages) printf '%s' "${REIMU_EXTRA_PACKAGES:-none}" ;;
-    services) printf '%s' "${REIMU_SERVICES:-none}" ;;
+    bundles) printf '%s' "${REIMU_CATALOG:-$(t none)}" ;;
+    extra_packages) printf '%s' "${REIMU_EXTRA_PACKAGES:-$(t none)}" ;;
+    services) printf '%s' "${REIMU_SERVICES:-$(t none)}" ;;
     sanae) printf '%s' "$REIMU_SANAE" ;;
   esac
 }
@@ -447,11 +461,12 @@ wiz_value() {
 # The side pane: what has been answered, what is being asked, what is left.
 wiz_progress() {
   local current="$1" done_upto="$2" out="" i entry id group label last_group=""
-  out+="  Your choices"$'\n'
+  out+="  $(t "Your choices")"$'\n'
   for i in "${!SETTINGS[@]}"; do
     entry="${SETTINGS[$i]}"; id="${entry%%|*}"; entry="${entry#*|}"; group="${entry%%|*}"; label="${entry#*|}"
     wiz_skip "$id" && [[ "$id" != "$current" ]] && continue
-    if [[ "$group" != "$last_group" ]]; then out+=$'\n'"  $group"$'\n'; last_group="$group"; fi
+    if [[ "$group" != "$last_group" ]]; then out+=$'\n'"  $(t "$group")"$'\n'; last_group="$group"; fi
+    label="$(t "$label")"
     if [[ "$id" == "$current" ]]; then
       out+="  [>] $label"$'\n'
     elif (( i < done_upto )); then
@@ -460,7 +475,7 @@ wiz_progress() {
       out+="  [ ] $label"$'\n'
     fi
   done
-  [[ -z "$current" ]] && out+=$'\n'"  Esc in a question goes back one."$'\n'
+  [[ -z "$current" ]] && out+=$'\n'"  $(t "Esc in a question goes back one.")"$'\n'
   progress_write "$out"
 }
 
@@ -482,7 +497,7 @@ wiz_guided() {
       while (( j > 0 )) && wiz_skip "${SETTINGS[$j]%%|*}"; do j=$((j-1)); done
       i=$(( j < 0 ? 0 : j ))
       last_group=""
-      ui_note "Back to: ${SETTINGS[$i]##*|}"
+      ui_note "$(tf "Back to: %s" "$(t "${SETTINGS[$i]##*|}")")"
     else
       i=$((i+1))
     fi
@@ -491,20 +506,21 @@ wiz_guided() {
 }
 
 wiz_theme_value() {
-  if [[ "$REIMU_DESKTOP" != xfce ]]; then printf 'xfce only'
-  elif [[ "$REIMU_THEME" == default && "$REIMU_ICONS" == default ]]; then printf 'as it comes'
+  if [[ "$REIMU_DESKTOP" != xfce ]]; then t 'xfce only'
+  elif [[ "$REIMU_THEME" == default && "$REIMU_ICONS" == default ]]; then t 'as it comes'
   else printf '%s %s · %s' "$REIMU_THEME" "$REIMU_THEME_VARIANT" "$REIMU_ICONS"; fi
 }
 
 wiz_disk_value() {
-  if [[ "$REIMU_DISK_MODE" == auto ]]; then printf 'auto · %s' "${REIMU_DISK:-?}"
-  else printf 'manual · root %s' "${REIMU_PART_ROOT:-?}"; fi
+  if [[ "$REIMU_DISK_MODE" == auto ]]; then tf 'auto · %s' "${REIMU_DISK:-?}"
+  else tf 'manual · root %s' "${REIMU_PART_ROOT:-?}"; fi
 }
 
 wizard() {
   export REIMU_INTERACTIVE=1
   local choice
   if [[ -z "$REIMU_USER" ]]; then
+    q_ui_language
     ui_box "Welcome" "Reimu asks a few questions, explains each one, and then installs Arch Linux from start to finish: base system, desktop, drivers, the lot.
 Your answers pile up on the left as you go. Esc in any question goes back to the previous one; the menu at the end lets you change any single answer.
 Nothing is written to the disk until you see the summary and type YES.
@@ -532,7 +548,7 @@ Made by Chidaruma · github.com/Chidaruma696" 196
       install)
         config_normalize
         if config_validate; then return 0; fi
-        warn "Fix the problems above before installing." ;;
+        warn "$(t "Fix the problems above before installing.")" ;;
       quit) exit 0 ;;
       __again__) ;;
       *) "q_$choice" ;;
