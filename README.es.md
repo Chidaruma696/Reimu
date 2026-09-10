@@ -13,6 +13,7 @@
 ![Bash](https://img.shields.io/badge/bash-5-4eaa25?style=for-the-badge&logo=gnubash&logoColor=white)
 ![Dependencias](https://img.shields.io/badge/dependencias-0-2b2140?style=for-the-badge)
 ![Licencia MIT](https://img.shields.io/badge/licencia-MIT-1b150d?style=for-the-badge)
+![Experimental](https://img.shields.io/badge/estado-experimental-d20f39?style=for-the-badge)
 
 <br/>
 
@@ -23,7 +24,7 @@
 ---
 
 > [!IMPORTANT]
-> Reimu formatea discos. Lee el resumen que muestra antes de escribir `YES`, y pruébalo primero en una máquina virtual. Es software joven; el modo de simulación existe para que veas cada comando antes de confiar en él.
+> **Experimental.** Reimu formatea discos. Lee el resumen que muestra antes de escribir `YES`, y pruébalo primero en una máquina virtual. Es software joven; el modo de simulación existe para que veas cada comando antes de confiar en él.
 
 <br/>
 
@@ -118,6 +119,7 @@ En [`reimu.conf.example`](reimu.conf.example) están todas las claves con sus op
 | **AUR** | paru o yay, compilado dentro del chroot como tu usuario. |
 | **Paquetes** | development, office, internet, multimedia, graphics, gaming, utilities, fonts, japanese (fcitx5 + mozc), virtualization. El asistente muestra exactamente qué paquetes instala cada uno antes de elegir. Listas de texto plano en [`catalog/`](catalog), fáciles de editar. |
 | **Mantenimiento** | Descargas en paralelo y color en pacman, `reflector.timer`, `paccache.timer`, `fstrim.timer`, `systemd-timesyncd`, power-profiles-daemon en portátiles. |
+| **Sanae** | Al final, Reimu ofrece instalar [Sanae](https://github.com/Chidaruma696/Sanae), la tienda de software para la terminal (experimental): un binario estático en `/usr/local/bin`, más `expac`, `pacman-contrib` y los datos AppStream que lee. |
 | **Temas (XFCE)** | Greybird, Arc, Materia, Orchis, Flat Remix, Skeuos (el aspecto de Kali), Dracula, Nordic, Catppuccin, en oscuro o claro, con iconos Papirus, Tela, Flat Remix, elementary, Breeze o Arc. Se instalan y quedan como predeterminados de tu usuario, así que el primer inicio de sesión ya se ve así. |
 
 <br/>

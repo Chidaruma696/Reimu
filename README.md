@@ -13,6 +13,7 @@
 ![Bash](https://img.shields.io/badge/bash-5-4eaa25?style=for-the-badge&logo=gnubash&logoColor=white)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-2b2140?style=for-the-badge)
 ![License MIT](https://img.shields.io/badge/license-MIT-1b150d?style=for-the-badge)
+![Experimental](https://img.shields.io/badge/status-experimental-d20f39?style=for-the-badge)
 
 <br/>
 
@@ -23,7 +24,7 @@
 ---
 
 > [!IMPORTANT]
-> Reimu formats disks. Read the summary it shows before typing `YES`, and try it in a virtual machine first. It is young software; the dry-run mode exists so you can see every command before trusting it.
+> **Experimental.** Reimu formats disks. Read the summary it shows before typing `YES`, and try it in a virtual machine first. It is young software; the dry-run mode exists so you can see every command before trusting it.
 
 <br/>
 
@@ -116,6 +117,7 @@ See [`reimu.conf.example`](reimu.conf.example) for every key with its options. U
 | **AUR** | paru or yay, built inside the chroot as your user. |
 | **Bundles** | development, office, internet, multimedia, graphics, gaming, utilities, fonts, japanese (fcitx5 + mozc), virtualization. The wizard shows exactly which packages each one installs before you pick. Plain text lists in [`catalog/`](catalog), easy to edit. |
 | **Housekeeping** | Parallel downloads and color in pacman, `reflector.timer`, `paccache.timer`, `fstrim.timer`, `systemd-timesyncd`, power-profiles-daemon on laptops. |
+| **Sanae** | At the end, Reimu offers to install [Sanae](https://github.com/Chidaruma696/Sanae), the software store for the terminal (experimental): one static binary in `/usr/local/bin`, plus `expac`, `pacman-contrib` and the AppStream data it reads. |
 | **Themes (XFCE)** | Greybird, Arc, Materia, Orchis, Flat Remix, Skeuos (the Kali look), Dracula, Nordic, Catppuccin, in dark or light, with Papirus, Tela, Flat Remix, elementary, Breeze or Arc icons. Installed and set as your user's default, so the first login already looks like that. |
 
 <br/>

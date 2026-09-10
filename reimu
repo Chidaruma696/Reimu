@@ -33,7 +33,7 @@ if [[ "${1:-}" == --side-pane ]]; then
   file="$2"
   while true; do
     printf '\033[H\033[2J'
-    printf '\n  \e[38;5;196m\e[1m霊夢 Reimu\e[0m\n  \e[2mArch Linux installer v%s\e[0m\n\n' "$REIMU_VERSION"
+    printf '\n  \e[38;5;196m\e[1m霊夢 Reimu\e[0m\n  \e[2mArch Linux installer v%s · experimental\e[0m\n\n' "$REIMU_VERSION"
     cat "$file" 2>/dev/null
     sleep 1
   done
