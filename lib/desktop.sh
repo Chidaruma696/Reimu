@@ -70,7 +70,7 @@ desktop_gpu() {
   [[ "$gpu" == auto ]] && gpu="$DETECT_GPU"
   [[ "$gpu" == none ]] && return 0
   msg "Graphics: $gpu"
-  local -a pkgs=(mesa)
+  local -a pkgs=(mesa) svcs=()
   [[ "$REIMU_MULTILIB" == yes ]] && pkgs+=(lib32-mesa)
   case "$gpu" in
     intel)
@@ -107,15 +107,22 @@ EOF
       ;;
     nouveau) pkgs+=(vulkan-nouveau libva-mesa-driver) ;;
     vm)
+      # Guest tools. The services can only be enabled once the packages are in (that
+      # ordering bug is what used to crash the desktop phase in a VirtualBox VM).
       case "$DETECT_VIRT" in
-        oracle) pkgs+=(virtualbox-guest-utils); chr_enable vboxservice.service ;;
-        vmware) pkgs+=(open-vm-tools xf86-video-vmware); chr_enable vmtoolsd.service vmware-vmblock-fuse.service ;;
-        kvm|qemu) pkgs+=(qemu-guest-agent spice-vdagent); chr_enable qemu-guest-agent.service ;;
-        microsoft) pkgs+=(hyperv); chr_enable hv_fcopy_daemon.service hv_kvp_daemon.service hv_vss_daemon.service ;;
+        oracle) pkgs+=(virtualbox-guest-utils); svcs+=(vboxservice.service) ;;
+        vmware) pkgs+=(open-vm-tools xf86-video-vmware); svcs+=(vmtoolsd.service vmware-vmblock-fuse.service) ;;
+        kvm|qemu) pkgs+=(qemu-guest-agent spice-vdagent); svcs+=(qemu-guest-agent.service) ;;
+        microsoft) pkgs+=(hyperv); svcs+=(hv_fcopy_daemon.service hv_kvp_daemon.service hv_vss_daemon.service) ;;
         *) pkgs+=(qemu-guest-agent spice-vdagent) ;;
       esac ;;
   esac
   chr_pkg "${pkgs[@]}"
+  local s
+  for s in "${svcs[@]}"; do
+    RUN_TITLE="Enabling $s" try arch-chroot "$REIMU_MNT" systemctl enable "$s"
+  done
+  return 0
 }
 
 # ---- themes ------------------------------------------------------------------
