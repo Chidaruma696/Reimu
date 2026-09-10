@@ -50,14 +50,15 @@ ui_init() {
   (( cols - 4 < UI_WIDTH )) && UI_WIDTH=$(( cols - 4 ))
   if ! (( DRY_RUN )); then
     local dir="/tmp/reimu-gum"
-    if [[ ! -x "$dir/gum" ]] && has curl; then
+    if [[ ! -x "$dir/gum" ]] && { has wget || has curl; }; then
       printf '%s◆%s Preparing the interface (fetching gum %s)…\n' "$C_MAGENTA" "$C_RESET" "$GUM_VERSION"
       local arch tgz
       case "$(uname -m)" in x86_64) arch=x86_64 ;; aarch64) arch=arm64 ;; *) arch="" ;; esac
       if [[ -n "$arch" ]]; then
         tgz="https://github.com/charmbracelet/gum/releases/download/v${GUM_VERSION}/gum_${GUM_VERSION}_Linux_${arch}.tar.gz"
         mkdir -p "$dir"
-        curl -fsSL --max-time 90 "$tgz" | tar xz -C "$dir" --strip-components=1 2>> "$REIMU_LOG" || rm -f "$dir/gum"
+        { fetch "$tgz" "$dir/gum.tgz" && tar xzf "$dir/gum.tgz" -C "$dir" --strip-components=1 2>> "$REIMU_LOG"; } || rm -f "$dir/gum"
+        rm -f "$dir/gum.tgz"
         chmod +x "$dir/gum" 2>/dev/null || true
       fi
     fi

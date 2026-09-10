@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # Reimu · core: logging, command execution, dry-run, safety helpers.
 
-REIMU_VERSION="0.7.1"
+REIMU_VERSION="0.7.2"
 REIMU_RUN_DIR="${REIMU_RUN_DIR:-/run/reimu}"
 REIMU_LOG="${REIMU_LOG:-/var/log/reimu.log}"
 REIMU_MNT="${REIMU_MNT:-/mnt}"
@@ -214,6 +214,17 @@ edit_file() {
 }
 
 # ---- chroot helpers --------------------------------------------------------
+# Download a URL to a file. wget first (resumes and retries on its own; curl dies
+# with exit 56 on flaky links such as VirtualBox NAT), curl with retries otherwise.
+fetch() {
+  local url="$1" out="$2"
+  if has wget; then
+    wget -c --tries=5 --waitretry=5 --timeout=60 -q -O "$out" "$url"
+  else
+    curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 --max-time 300 "$url" -o "$out"
+  fi
+}
+
 chr() { run arch-chroot "$REIMU_MNT" "$@"; }
 chr_sh() { run arch-chroot "$REIMU_MNT" /bin/bash -c "$1"; }
 chr_user() { local user="$1"; shift; run arch-chroot "$REIMU_MNT" sudo -u "$user" -H /bin/bash -c "$1"; }
