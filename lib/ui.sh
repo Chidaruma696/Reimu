@@ -289,27 +289,18 @@ ask_multi() {
   done
 
   if (( UI_GUM )); then
-    # A checkbox list: Enter marks or unmarks the line under the cursor, "Done" finishes.
-    local -a opts=()
-    local pick cursor="" count h
-    while true; do
-      opts=(); count=0
-      for i in "${!keys[@]}"; do
-        if (( on[i] )); then opts+=("[x] ${shown[$i]}"$'\t'"${keys[$i]}"); count=$((count+1)); else opts+=("[ ] ${shown[$i]}"$'\t'"${keys[$i]}"); fi
-      done
-      opts+=("✔ Done · continue with $count selected"$'\t'"__done__")
-      h=${#opts[@]}; (( h > 16 )) && h=16
-      pick="$(gum choose --header "$prompt  ·  enter marks or unmarks, pick Done when finished" --height "$h" --label-delimiter $'\t' ${cursor:+--selected "$cursor"} "${opts[@]}")" || pick="__done__"
-      [[ "$pick" == "__done__" || -z "$pick" ]] && break
-      for i in "${!keys[@]}"; do
-        if [[ "${keys[$i]}" == "$pick" ]]; then
-          on[i]=$(( 1 - on[i] ))
-          cursor="$( (( on[i] )) && printf '[x] %s' "${shown[$i]}" || printf '[ ] %s' "${shown[$i]}" )"
-        fi
-      done
+    # Like archinstall: space marks, enter continues. A "none" line lets you pick nothing,
+    # because gum returns the highlighted line when nothing is marked.
+    local -a opts=("— none —"$'\t'"__none__") sel=()
+    local selected=""
+    for i in "${!keys[@]}"; do
+      opts+=("${shown[$i]}"$'\t'"${keys[$i]}")
+      (( on[i] )) && selected+="${selected:+,}${shown[$i]}"
     done
+    local h=${#opts[@]}; (( h > 16 )) && h=16
+    mapfile -t sel < <(gum choose --no-limit --header "$prompt  ·  SPACE marks · ENTER continues" --height "$h" --label-delimiter $'\t' ${selected:+--selected "$selected"} "${opts[@]}") || sel=()
     local -a result=()
-    for i in "${!keys[@]}"; do (( on[i] )) && result+=("${keys[$i]}"); done
+    for i in "${!keys[@]}"; do has_word "${sel[*]}" "${keys[$i]}" && result+=("${keys[$i]}"); done
     _out="${result[*]}"
     log "answer $1 = ${_out}"
     printf '  %s%s: %s%s\n' "$C_DIM" "$prompt" "${_out:-none}" "$C_RESET"

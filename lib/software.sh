@@ -34,6 +34,13 @@ sw_read_bundles() {
   local -a extra
   read -r -a extra <<< "$REIMU_EXTRA_PACKAGES"
   SW_REPO+=("${extra[@]}")
+  # Theme and icon packages (XFCE).
+  if [[ "$REIMU_DESKTOP" == xfce ]]; then
+    local t
+    for t in "$(theme_package "${THEMES[$REIMU_THEME]:-}")" "$(theme_package "${ICONS[$REIMU_ICONS]:-}")"; do
+      case "$t" in "") ;; aur:*) SW_AUR+=("${t#aur:}") ;; *) SW_REPO+=("$t") ;; esac
+    done
+  fi
 }
 
 # Temporary passwordless sudo for builds inside the chroot.
@@ -67,7 +74,7 @@ EOF
 
 sw_install_bundles() {
   sw_read_bundles
-  (( ${#SW_REPO[@]} + ${#SW_AUR[@]} )) || return 0
+  (( ${#SW_REPO[@]} + ${#SW_AUR[@]} )) || { desktop_apply_theme; return 0; }
   if (( ${#SW_REPO[@]} )); then
     msg "${#SW_REPO[@]} packages from the repositories"
     chr_pkg "${SW_REPO[@]}"
@@ -87,6 +94,7 @@ sw_install_bundles() {
   for g in "${SW_GROUPS[@]}"; do chr usermod -aG "$g" "$REIMU_USER"; done
   for e in "${SW_ENV[@]}"; do grep -qsxF "$e" "$REIMU_MNT/etc/environment" || append_file /etc/environment "$e"; done
   (( ${#SW_SVC[@]} )) && chr_enable "${SW_SVC[@]}"
+  desktop_apply_theme
   return 0
 }
 

@@ -53,7 +53,9 @@ REIMU_CUSTOM_REPOS=""               # name=URL name2=URL  (added with SigLevel O
 # --- desktop ------------------------------------------------------------------
 REIMU_DESKTOP="xfce"                # none · gnome · plasma · xfce · cinnamon · mate · budgie · lxqt · cosmic · deepin · hyprland · sway · niri · i3
 REIMU_DISPLAY_MANAGER="auto"        # auto · gdm · sddm · lightdm · ly · none
-REIMU_XFCE_WIN2K="yes"              # fetch the Win2k Undead theme (XFCE only)
+REIMU_THEME="arc"                   # xfce: greybird · arc · materia · orchis · flat-remix · skeuos · dracula · nordic · catppuccin · default
+REIMU_THEME_VARIANT="dark"          # dark · light
+REIMU_ICONS="papirus"               # papirus · tela · flat-remix · elementary · breeze · arc · default
 REIMU_GPU="auto"                    # auto · intel · amd · nvidia · nvidia-proprietary · nouveau · vm · none
 
 # --- software -----------------------------------------------------------------
