@@ -255,12 +255,20 @@ EOF
 
 help_sanae() {
   cat <<'EOF'
-Sanae is a software store that runs in the terminal, made by the same author
-as Reimu: browse apps by shelf (Internet, Games, Office…) with human names and
-popularity, search the repositories and the AUR together, keep the system
-updated with the Arch news in front of you, and apply "recipes" that install
-and configure things in one go (Docker, QEMU, fonts, Japanese input, XFCE
-themes). It is experimental. It is a single binary in /usr/local/bin/sanae;
+On Windows you install programs from a store; on Arch you type pacman commands
+and look up package names. Sanae is that store, for the terminal: it shows the
+programs by what they are (Internet, Games, Office, Development…) with their
+real names and a one-line summary, tells you how many Arch users have each one,
+and installs them with one key. It searches the official repositories and the
+AUR (the community repository with thousands more programs) at the same time,
+keeps your system updated and warns you when Arch posts news you must read
+before updating, and can clean up leftover packages.
+It also has "recipes": one-key setups that install a program AND leave it
+working, which plain package managers never do. Examples: Docker with the
+service running and your user allowed to use it, QEMU virtual machines ready
+to create a VM, Japanese input, extra fonts, XFCE themes.
+Made by the same author as Reimu. Experimental: it is young software. It does
+not replace pacman; it runs pacman for you. One file in /usr/local/bin/sanae;
 remove it with: sudo rm /usr/local/bin/sanae
 EOF
 }
