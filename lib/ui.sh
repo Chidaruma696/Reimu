@@ -100,7 +100,7 @@ banner() {
 
 hr() { printf '%s%s%s\n' "$C_DIM" "────────────────────────────────────────────────────────────────────────" "$C_RESET"; }
 
-ui_note() { printf '  %s%s%s\n' "$C_DIM" "$*" "$C_RESET"; }
+ui_note() { printf '  %s%s%s\n' "$C_DIM" "$(t "$*")" "$C_RESET"; }
 
 # Explanation box shown before a question.
 ui_help() {
@@ -117,7 +117,8 @@ ui_help() {
 
 # Framed block with a title (summary, warnings).
 ui_box() {
-  local title="$1" body="$2" color="${3:-196}"
+  local title body color="${3:-196}"
+  title="$(t "$1")"; body="$(t "$2")"
   if (( UI_GUM )); then
     gum style --border normal --border-foreground "$color" --padding "0 2" --margin "1 0" --width "$UI_WIDTH" "$(gum style --bold --foreground "$color" "$title")" "" "$body"
   else
@@ -149,11 +150,12 @@ _ui_clean() { printf '%s' "${1//,/ ·}"; }
 
 ask_text() {
   local -n _out=$1
-  local prompt="$2" def="${3:-}" ph="${4:-}" ans
+  local prompt def="${3:-}" ph ans
+  prompt="$(t "$2")"; ph="$(t "${4:-}")"
   _ui_guard "$1"
   while true; do
     if (( UI_GUM )); then
-      ans="$(gum input --header "$prompt  ·  Esc goes back" --value "$def" --placeholder "$ph" --width 60)" || { ans="$def"; UI_BACK=1; }
+      ans="$(gum input --header "$prompt  ·  $(t "Esc goes back")" --value "$def" --placeholder "$ph" --width 60)" || { ans="$def"; UI_BACK=1; }
       [[ -z "$ans" ]] && ans="$def"
       if (( UI_BACK )); then _out="$ans"; return 0; fi
     elif [[ -n "$def" ]]; then
@@ -163,7 +165,7 @@ ask_text() {
       read -r -e -p "$(printf '%s?%s %s: ' "$C_CYAN" "$C_RESET" "$prompt")" ans
     fi
     [[ -n "$ans" ]] && break
-    warn "A value is required."
+    warn "$(t "A value is required.")"
   done
   _out="$ans"
   log "answer $1 = $ans"
@@ -174,12 +176,13 @@ ask_text() {
 # Like ask_text but an empty answer is fine (returns "").
 ask_optional() {
   local -n _out=$1
-  local prompt="$2" def="${3:-}" ph="${4:-Enter to skip}" ans
+  local prompt def="${3:-}" ph ans
+  prompt="$(t "$2")"; ph="$(t "${4:-Enter to skip}")"
   if (( ASSUME_YES )) && [[ -z "${REIMU_INTERACTIVE:-}" ]]; then _out="$def"; return 0; fi
   if (( UI_GUM )); then
-    ans="$(gum input --header "$prompt  ·  Esc goes back" --value "$def" --placeholder "$ph" --width 60)" || { ans="$def"; UI_BACK=1; }
+    ans="$(gum input --header "$prompt  ·  $(t "Esc goes back")" --value "$def" --placeholder "$ph" --width 60)" || { ans="$def"; UI_BACK=1; }
   else
-    read -r -e -p "$(printf '%s?%s %s %s[%s]%s: ' "$C_CYAN" "$C_RESET" "$prompt" "$C_DIM" "${def:-none}" "$C_RESET")" ans
+    read -r -e -p "$(printf '%s?%s %s %s[%s]%s: ' "$C_CYAN" "$C_RESET" "$prompt" "$C_DIM" "${def:-$(t none)}" "$C_RESET")" ans
     ans="${ans:-$def}"
   fi
   [[ "$ans" == "-" ]] && ans=""
@@ -190,35 +193,40 @@ ask_optional() {
 
 ask_secret() {
   local -n _out=$1
-  local prompt="$2" a b
+  local prompt a b
+  prompt="$(t "$2")"
   _ui_guard "$1"
   while true; do
     if (( UI_GUM )); then
       a="$(gum input --password --header "$prompt" --placeholder "" --width 60)" || a=""
-      [[ -z "$a" ]] && { warn "Empty passwords are not allowed."; continue; }
-      b="$(gum input --password --header "Repeat it" --placeholder "" --width 60)" || b=""
+      [[ -z "$a" ]] && { warn "$(t "Empty passwords are not allowed.")"; continue; }
+      b="$(gum input --password --header "$(t "Repeat it")" --placeholder "" --width 60)" || b=""
     else
       read -r -s -p "$(printf '%s?%s %s: ' "$C_CYAN" "$C_RESET" "$prompt")" a; printf '\n'
-      [[ -z "$a" ]] && { warn "Empty passwords are not allowed."; continue; }
-      read -r -s -p "$(printf '%s?%s Repeat: ' "$C_CYAN" "$C_RESET")" b; printf '\n'
+      [[ -z "$a" ]] && { warn "$(t "Empty passwords are not allowed.")"; continue; }
+      read -r -s -p "$(printf '%s?%s %s: ' "$C_CYAN" "$C_RESET" "$(t "Repeat it")")" b; printf '\n'
     fi
     [[ "$a" == "$b" ]] && break
-    warn "They do not match, try again."
+    warn "$(t "They do not match, try again.")"
   done
   _out="$a"
   return 0
 }
 
 ask_yesno() {
-  local prompt="$1" def="${2:-y}" ans hint rc
+  local prompt def="${2:-y}" ans hint rc
+  prompt="$(t "$1")"
   if (( ASSUME_YES )) && [[ -z "${REIMU_INTERACTIVE:-}" ]]; then
     [[ "$def" == y ]]; return
   fi
   if (( UI_GUM )); then
     if [[ "$def" == y ]]; then gum confirm --default=true "$prompt"; else gum confirm --default=false "$prompt"; fi
     rc=$?
-    if (( rc > 1 )); then UI_BACK=1; [[ "$def" == y ]]; rc=$?; fi
-    if (( rc == 0 )); then printf '  %s[ok]%s %s: yes\n' "$C_GREEN" "$C_RESET" "$prompt"; else printf '  %s[ok]%s %s: no\n' "$C_GREEN" "$C_RESET" "$prompt"; fi
+    if (( rc > 1 )); then
+      UI_BACK=1
+      if [[ "$def" == y ]]; then rc=0; else rc=1; fi
+    fi
+    if (( rc == 0 )); then printf '  %s[ok]%s %s: %s\n' "$C_GREEN" "$C_RESET" "$prompt" "$(t yes)"; else printf '  %s[ok]%s %s: %s\n' "$C_GREEN" "$C_RESET" "$prompt" "$(t no)"; fi
     return "$rc"
   fi
   [[ "$def" == y ]] && hint="Y/n" || hint="y/N"
@@ -235,13 +243,14 @@ ask_yesno() {
 # Single choice. Items are "key|Label|hint" (hint optional).
 ask_choice() {
   local -n _out=$1
-  local prompt="$2" def="$3"; shift 3
+  local prompt def="$3"
+  prompt="$(t "$2")"; shift 3
   local -a keys=() labels=()
   local it i ans rest deflabel="" width=0
   _ui_guard "$1"
   for it in "$@"; do
     keys+=("${it%%|*}"); rest="${it#*|}"
-    labels+=("$(_ui_clean "${rest%%|*}")")
+    labels+=("$(_ui_clean "$(t "${rest%%|*}")")")
     (( ${#rest} > width )) && width=${#rest}
   done
   # Align hints in a second column.
@@ -249,7 +258,7 @@ ask_choice() {
   for i in "${!keys[@]}"; do
     it="${*:$((i+1)):1}"; rest="${it#*|}"
     if [[ "$rest" == *"|"* ]]; then
-      shown+=("$(printf '%-22s %s' "${labels[$i]}" "$(_ui_clean "${rest#*|}")")")
+      shown+=("$(printf '%-22s %s' "${labels[$i]}" "$(_ui_clean "$(t "${rest#*|}")")")")
     else
       shown+=("${labels[$i]}")
     fi
@@ -260,7 +269,7 @@ ask_choice() {
     local -a opts=()
     for i in "${!keys[@]}"; do opts+=("${shown[$i]}"$'\t'"${keys[$i]}"); done
     local h=${#keys[@]}; (( h > 16 )) && h=16
-    ans="$(gum choose --header "$prompt  ·  Enter picks · Esc goes back" --height "$h" --label-delimiter $'\t' ${deflabel:+--selected "$deflabel"} "${opts[@]}")" || { ans="$def"; UI_BACK=1; log "gum choose exited $? for: $prompt"; }
+    ans="$(gum choose --header "$prompt  ·  $(t "Enter picks") · $(t "Esc goes back")" --height "$h" --label-delimiter $'\t' ${deflabel:+--selected "$deflabel"} "${opts[@]}")" || { ans="$def"; UI_BACK=1; log "gum choose exited $? for: $prompt"; }
     [[ -z "$ans" ]] && ans="$def"
     _out="$ans"
     log "answer $1 = $ans"
@@ -271,7 +280,7 @@ ask_choice() {
   printf '%s?%s %s\n' "$C_CYAN" "$C_RESET" "$prompt"
   for i in "${!keys[@]}"; do
     if [[ "${keys[$i]}" == "$def" ]]; then
-      printf '   %s%2d)%s %s %s(default)%s\n' "$C_BOLD" $((i+1)) "$C_RESET" "${shown[$i]}" "$C_DIM" "$C_RESET"
+      printf '   %s%2d)%s %s %s(%s)%s\n' "$C_BOLD" $((i+1)) "$C_RESET" "${shown[$i]}" "$C_DIM" "$(t default)" "$C_RESET"
     else
       printf '   %2d) %s\n' $((i+1)) "${shown[$i]}"
     fi
@@ -285,23 +294,24 @@ ask_choice() {
     for i in "${!keys[@]}"; do
       if [[ "${keys[$i]}" == "$ans" ]]; then _out="$ans"; return 0; fi
     done
-    warn "Pick a number between 1 and ${#keys[@]}."
+    warn "$(tf "Pick a number between 1 and %s." "${#keys[@]}")"
   done
 }
 
 # Multi-select. Items are "key|Label|hint". Result: space-separated keys in item order.
 ask_multi() {
   local -n _out=$1
-  local prompt="$2" pre="$3"; shift 3
+  local prompt pre="$3"
+  prompt="$(t "$2")"; shift 3
   local -a keys=() shown=() on=()
   local it i ans tok rest
   _ui_guard "$1"
   for it in "$@"; do
     keys+=("${it%%|*}"); rest="${it#*|}"
     if [[ "$rest" == *"|"* ]]; then
-      shown+=("$(printf '%-22s %s' "$(_ui_clean "${rest%%|*}")" "$(_ui_clean "${rest#*|}")")")
+      shown+=("$(printf '%-22s %s' "$(_ui_clean "$(t "${rest%%|*}")")" "$(_ui_clean "$(t "${rest#*|}")")")")
     else
-      shown+=("$(_ui_clean "$rest")")
+      shown+=("$(_ui_clean "$(t "$rest")")")
     fi
     if has_word "$pre" "${it%%|*}"; then on+=(1); else on+=(0); fi
   done
@@ -309,14 +319,15 @@ ask_multi() {
   if (( UI_GUM )); then
     # Like archinstall: space marks, enter continues. A "none" line lets you pick nothing,
     # because gum returns the highlighted line when nothing is marked.
-    local -a opts=("[none] pick nothing"$'\t'"__none__") sel=()
+    local -a opts=("$(t "[none] pick nothing")"$'\t'"__none__") sel=()
     local selected=""
     for i in "${!keys[@]}"; do
       opts+=("${shown[$i]}"$'\t'"${keys[$i]}")
       (( on[i] )) && selected+="${selected:+,}${shown[$i]}"
     done
     local h=${#opts[@]}; (( h > 16 )) && h=16
-    local header="$prompt  ·  $UI_MARK_KEY marks [x] each one you want · ENTER when done · Esc goes back" rc=0 tries=0
+    local header rc=0 tries=0
+    header="$prompt  ·  $UI_MARK_KEY $(t "marks [x] each one you want") · $(t "ENTER when done") · $(t "Esc goes back")"
     while true; do
       sel=()
       mapfile -t sel < <(gum choose --no-limit --header "$header" --height "$h" --label-delimiter $'\t' ${selected:+--selected "$selected"} "${opts[@]}"; printf '%s\n' "__rc__$?")
@@ -325,7 +336,7 @@ ask_multi() {
       (( ${#sel[@]} )) && break
       tries=$((tries+1))
       (( tries >= 2 )) && break
-      header="NOTHING WAS MARKED. Move to an option and press $UI_MARK_KEY: it turns into [x]. Then ENTER. Mark [none] to pick nothing"
+      header="$(tf "NOTHING WAS MARKED. Move to an option and press %s: it turns into [x]. Then ENTER. Mark [none] to pick nothing" "$UI_MARK_KEY")"
     done
     if (( UI_BACK )); then
       local -a keep=()
@@ -342,7 +353,7 @@ ask_multi() {
   fi
 
   while true; do
-    printf '%s?%s %s %s(type numbers to mark or unmark, e.g. 1 3 · all · none · Enter alone when done)%s\n' "$C_CYAN" "$C_RESET" "$prompt" "$C_DIM" "$C_RESET"
+    printf '%s?%s %s %s(%s)%s\n' "$C_CYAN" "$C_RESET" "$prompt" "$C_DIM" "$(t 'type numbers to mark or unmark, e.g. 1 3 · all · none · Enter alone when done')" "$C_RESET"
     for i in "${!keys[@]}"; do
       if (( on[i] )); then
         printf '   %s[x]%s %2d) %s\n' "$C_GREEN" "$C_RESET" $((i+1)) "${shown[$i]}"
@@ -379,8 +390,9 @@ ask_menu() {
   local -a keys=() labels=() values=()
   local it i ans rest
   for it in "$@"; do
-    keys+=("${it%%|*}"); rest="${it#*|}"; labels+=("${rest%%|*}"); values+=("${rest#*|}")
+    keys+=("${it%%|*}"); rest="${it#*|}"; labels+=("$(t "${rest%%|*}")"); values+=("${rest#*|}")
   done
+  title="$(t "$title")"
   if (( UI_GUM )); then
     local -a opts=()
     for i in "${!keys[@]}"; do
@@ -409,7 +421,7 @@ ask_menu() {
     for i in "${!keys[@]}"; do
       if [[ "${keys[$i]}" == "$ans" ]]; then _out="$ans"; return 0; fi
     done
-    warn "Pick a number between 1 and ${#keys[@]}."
+    warn "$(tf "Pick a number between 1 and %s." "${#keys[@]}")"
   done
 }
 
@@ -417,7 +429,8 @@ ask_menu() {
 ask_filter() {
   local var="$1"
   local -n _out=$1
-  local prompt="$2" def="${3:-}" ans; shift 3
+  local prompt def="${3:-}" ans
+  prompt="$(t "$2")"; shift 3
   local -a lines
   mapfile -t lines < <("$@")
   _ui_guard "$var"
@@ -426,7 +439,7 @@ ask_filter() {
     local l
     [[ -n "$def" ]] && ordered+=("$def")
     for l in "${lines[@]}"; do [[ "$l" == "$def" ]] || ordered+=("$l"); done
-    ans="$(printf '%s\n' "${ordered[@]}" | gum filter --header "$prompt  ·  type to search · Enter picks · Esc goes back" --height 12 --fuzzy)" || { ans="$def"; UI_BACK=1; }
+    ans="$(printf '%s\n' "${ordered[@]}" | gum filter --header "$prompt  ·  $(t "type to search") · $(t "Enter picks") · $(t "Esc goes back")" --height 12 --fuzzy)" || { ans="$def"; UI_BACK=1; }
     [[ -z "$ans" ]] && ans="$def"
     _out="$ans"
     log "answer $var = $ans"
@@ -438,5 +451,5 @@ ask_filter() {
 
 pause() {
   (( ASSUME_YES )) && return 0
-  read -r -p "$(printf '  %sPress Enter to continue…%s' "$C_DIM" "$C_RESET")" _
+  read -r -p "$(printf '  %s%s%s' "$C_DIM" "$(t 'Press Enter to continue…')" "$C_RESET")" _
 }

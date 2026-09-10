@@ -8,6 +8,7 @@
 #   reimu --save FILE           after the wizard, save the configuration and exit
 #   reimu --resume              continue an installation that was interrupted
 #   reimu --no-tmux             single pane, no live log on the side
+#   reimu --lang es             interface language (en, es)
 set -Eeuo pipefail
 
 REIMU_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
@@ -15,17 +16,17 @@ export REIMU_DIR
 
 # shellcheck source=lib/core.sh
 source "$REIMU_DIR/lib/core.sh"
-for _lib in ui help state detect config wizard disk base boot system desktop software apply; do
+for _lib in i18n ui help state detect config wizard disk base boot system desktop software apply; do
   # shellcheck disable=SC1090
   source "$REIMU_DIR/lib/$_lib.sh"
 done
 
 usage() {
-  sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit 0
 }
 
-CONFIG_SRC=""; SAVE_ONLY=""; RESUME=0; NO_TMUX="${REIMU_NO_TMUX:-0}"
+CONFIG_SRC=""; SAVE_ONLY=""; RESUME=0; NO_TMUX="${REIMU_NO_TMUX:-0}"; LANG_FLAG="${REIMU_UI_LANG:-}"
 ORIG_ARGS=("$@")
 
 # The left column of the tmux layout: logo, then the phase list (never returns).
@@ -46,6 +47,7 @@ while (( $# )); do
     --save|-s) SAVE_ONLY="$2"; shift ;;
     --resume|-r) RESUME=1 ;;
     --no-tmux) NO_TMUX=1 ;;
+    --lang|-l) LANG_FLAG="$2"; shift ;;
     --version|-V) printf 'reimu %s\n' "$REIMU_VERSION"; exit 0 ;;
     --help|-h) usage ;;
     *) die "Unknown option: $1 (try --help)" ;;
@@ -91,8 +93,10 @@ detect_all
 msg "Firmware $DETECT_FIRMWARE · CPU $DETECT_CPU · GPU $DETECT_GPU · RAM ${DETECT_RAM_MIB} MiB$( [[ "$DETECT_VIRT" != none ]] && printf ' · VM %s' "$DETECT_VIRT" )"
 
 [[ -n "$CONFIG_SRC" ]] && config_load_any "$CONFIG_SRC"
+[[ -n "$LANG_FLAG" ]] && REIMU_UI_LANG="$LANG_FLAG"
 config_defaults
 config_normalize
+i18n_load "$REIMU_UI_LANG"
 
 # Passwords for unattended runs.
 USER_PASSWORD="${REIMU_USER_PASSWORD:-}"

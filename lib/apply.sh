@@ -23,38 +23,38 @@ PHASES=(
 
 apply_summary() {
   local body=""
-  body+="$(printf '%-12s %s' "Machine" "$DETECT_FIRMWARE · cpu $DETECT_CPU · gpu $DETECT_GPU · $(help_ram_gib) GiB RAM$( (( DETECT_LAPTOP )) && printf ' · laptop' )$( [[ "$DETECT_VIRT" != none ]] && printf ' · vm %s' "$DETECT_VIRT" )")"$'\n'
+  body+="$(printf '%-12s %s' "$(t Machine)" "$DETECT_FIRMWARE · cpu $DETECT_CPU · gpu $DETECT_GPU · $(help_ram_gib) GiB RAM$( (( DETECT_LAPTOP )) && printf ' · %s' "$(t laptop)" )$( [[ "$DETECT_VIRT" != none ]] && printf ' · vm %s' "$DETECT_VIRT" )")"$'\n'
   if [[ "$REIMU_DISK_MODE" == auto ]]; then
-    body+="$(printf '%-12s %s' "Disk" "$REIMU_DISK  ← WILL BE ERASED COMPLETELY")"$'\n'
+    body+="$(printf '%-12s %s' "$(t Disk)" "$REIMU_DISK  ← $(t "WILL BE ERASED COMPLETELY")")"$'\n'
   else
-    body+="$(printf '%-12s %s' "Boot" "$REIMU_PART_BOOT (formatted)")"$'\n'
-    body+="$(printf '%-12s %s' "Root" "$REIMU_PART_ROOT  ← WILL BE FORMATTED")"$'\n'
-    [[ -n "$REIMU_PART_HOME" ]] && body+="$(printf '%-12s %s' "Home" "$REIMU_PART_HOME ($( [[ "$REIMU_FORMAT_HOME" == yes ]] && echo formatted || echo kept ))")"$'\n'
-    [[ -n "$REIMU_PART_SWAP" ]] && body+="$(printf '%-12s %s' "Swap part." "$REIMU_PART_SWAP")"$'\n'
+    body+="$(printf '%-12s %s' "$(t Boot)" "$REIMU_PART_BOOT ($(t formatted))")"$'\n'
+    body+="$(printf '%-12s %s' "$(t Root)" "$REIMU_PART_ROOT  ← $(t "WILL BE FORMATTED")")"$'\n'
+    [[ -n "$REIMU_PART_HOME" ]] && body+="$(printf '%-12s %s' "$(t Home)" "$REIMU_PART_HOME ($( if [[ "$REIMU_FORMAT_HOME" == yes ]]; then t formatted; else t kept; fi ))")"$'\n'
+    [[ -n "$REIMU_PART_SWAP" ]] && body+="$(printf '%-12s %s' "$(t "Swap part.")" "$REIMU_PART_SWAP")"$'\n'
   fi
-  body+="$(printf '%-12s %s' "Filesystem" "$REIMU_FS$( [[ "$REIMU_ENCRYPT" == yes ]] && printf ' · LUKS2' )$( [[ "$REIMU_SNAPSHOTS" == yes ]] && printf ' · snapshots' )")"$'\n'
-  body+="$(printf '%-12s %s' "Swap" "$REIMU_SWAP${REIMU_SWAP_SIZE:+ ($REIMU_SWAP_SIZE)}")"$'\n'
-  body+="$(printf '%-12s %s' "Boot" "$REIMU_BOOTLOADER · $REIMU_KERNELS")"$'\n'
-  body+="$(printf '%-12s %s' "System" "$REIMU_HOSTNAME · $REIMU_LOCALE · $REIMU_KEYMAP · $REIMU_TIMEZONE")"$'\n'
-  body+="$(printf '%-12s %s' "User" "$REIMU_USER · $REIMU_USER_SHELL · $REIMU_SUDO · root $( [[ "$REIMU_ROOT_LOGIN" == yes ]] && echo enabled || echo locked )")"$'\n'
-  body+="$(printf '%-12s %s' "Network" "$REIMU_NETWORK$( [[ "$REIMU_BLUETOOTH" != no ]] && printf ' · bluetooth' )$( [[ "$REIMU_PRINTING" == yes ]] && printf ' · printing' )$( [[ "$REIMU_FIREWALL" != no ]] && printf ' · %s' "$REIMU_FIREWALL" )$( [[ "$REIMU_SSH" == yes ]] && printf ' · sshd' )$( [[ "$REIMU_MULTILIB" == yes ]] && printf ' · multilib' )")"$'\n'
-  body+="$(printf '%-12s %s' "Repos" "${REIMU_REPOS:-none}${REIMU_CUSTOM_REPOS:+ · $REIMU_CUSTOM_REPOS}")"$'\n'
-  body+="$(printf '%-12s %s' "Desktop" "$REIMU_DESKTOP$( [[ "$REIMU_DESKTOP" != none ]] && printf ' · %s' "$(desktop_display_manager)" ) · gpu $REIMU_GPU")"$'\n'
-  body+="$(printf '%-12s %s' "Software" "aur $REIMU_AUR · ${REIMU_CATALOG:-no bundles}${REIMU_EXTRA_PACKAGES:+ · $REIMU_EXTRA_PACKAGES}$( [[ "$REIMU_SANAE" == yes ]] && printf ' · Sanae' )")"
+  body+="$(printf '%-12s %s' "$(t Filesystem)" "$REIMU_FS$( [[ "$REIMU_ENCRYPT" == yes ]] && printf ' · LUKS2' )$( [[ "$REIMU_SNAPSHOTS" == yes ]] && printf ' · snapshots' )")"$'\n'
+  body+="$(printf '%-12s %s' "$(t Swap)" "$REIMU_SWAP${REIMU_SWAP_SIZE:+ ($REIMU_SWAP_SIZE)}")"$'\n'
+  body+="$(printf '%-12s %s' "$(t Boot)" "$REIMU_BOOTLOADER · $REIMU_KERNELS")"$'\n'
+  body+="$(printf '%-12s %s' "$(t System)" "$REIMU_HOSTNAME · $REIMU_LOCALE · $REIMU_KEYMAP · $REIMU_TIMEZONE")"$'\n'
+  body+="$(printf '%-12s %s' "$(t User)" "$REIMU_USER · $REIMU_USER_SHELL · $REIMU_SUDO · root $( if [[ "$REIMU_ROOT_LOGIN" == yes ]]; then t enabled; else t locked; fi )")"$'\n'
+  body+="$(printf '%-12s %s' "$(t Network)" "$REIMU_NETWORK$( [[ "$REIMU_BLUETOOTH" != no ]] && printf ' · bluetooth' )$( [[ "$REIMU_PRINTING" == yes ]] && printf ' · printing' )$( [[ "$REIMU_FIREWALL" != no ]] && printf ' · %s' "$REIMU_FIREWALL" )$( [[ "$REIMU_SSH" == yes ]] && printf ' · sshd' )$( [[ "$REIMU_MULTILIB" == yes ]] && printf ' · multilib' )")"$'\n'
+  body+="$(printf '%-12s %s' "$(t Repos)" "${REIMU_REPOS:-$(t none)}${REIMU_CUSTOM_REPOS:+ · $REIMU_CUSTOM_REPOS}")"$'\n'
+  body+="$(printf '%-12s %s' "$(t Desktop)" "$REIMU_DESKTOP$( [[ "$REIMU_DESKTOP" != none ]] && printf ' · %s' "$(desktop_display_manager)" ) · gpu $REIMU_GPU")"$'\n'
+  body+="$(printf '%-12s %s' "$(t Software)" "aur $REIMU_AUR · ${REIMU_CATALOG:-$(t "no bundles")}${REIMU_EXTRA_PACKAGES:+ · $REIMU_EXTRA_PACKAGES}$( [[ "$REIMU_SANAE" == yes ]] && printf ' · Sanae' )")"
   ui_box "Summary" "$body" 196
 }
 
 apply_confirm() {
-  (( DRY_RUN )) && { msg "Dry run: nothing will be written."; return 0; }
+  (( DRY_RUN )) && { msg "$(t "Dry run: nothing will be written.")"; return 0; }
   (( ASSUME_YES )) && return 0
   local ans
-  printf '%sThis erases the data on the partitions marked above. There is no undo.%s\n' "$C_RED" "$C_RESET"
+  printf '%s%s%s\n' "$C_RED" "$(t 'This erases the data on the partitions marked above. There is no undo.')" "$C_RESET"
   if (( UI_GUM )); then
-    ans="$(gum input --header "Type YES to continue" --placeholder "YES" --width 20)" || ans=""
+    ans="$(gum input --header "$(t "Type YES to continue")" --placeholder "YES" --width 20)" || ans=""
   else
-    read -r -p "$(printf 'Type %sYES%s to continue: ' "$C_BOLD" "$C_RESET")" ans
+    read -r -p "$(printf '%s: ' "$(t 'Type YES to continue')")" ans
   fi
-  [[ "$ans" == YES ]] || die "Aborted. Nothing was changed."
+  [[ "$ans" == YES ]] || die "$(t "Aborted. Nothing was changed.")"
 }
 
 # The phase list with marks, for the side pane.
@@ -80,16 +80,16 @@ apply_install() {
     n=$((n+1))
     id="${ph%%|*}"; title="${ph#*|}"; title="${title%%|*}"; fn="${ph##*|}"
     if state_done "$id"; then
-      printf '  %s✔ [%s/%s] %s · already done%s\n' "$C_DIM" "$n" "$total" "$title" "$C_RESET"
+      printf '  %s✔ [%s/%s] %s · %s%s\n' "$C_DIM" "$n" "$total" "$(t "$title")" "$(t 'already done')" "$C_RESET"
       continue
     fi
     apply_progress "$id"
-    ui_phase "$n" "$total" "$title"
+    ui_phase "$n" "$total" "$(t "$title")"
     "$fn"
     [[ "$id" == finish ]] || state_mark "$id"
   done
   apply_progress "done"
-  ok "Done in $(( (SECONDS - start) / 60 )) min."
+  ok "$(tf "Done in %s min." "$(( (SECONDS - start) / 60 ))")"
   apply_goodbye
 }
 
@@ -118,13 +118,13 @@ apply_finish() {
 
 apply_goodbye() {
   local extra=""
-  [[ "$REIMU_SANAE" == yes ]] && extra+=$'\n'"Sanae is installed: type sanae after logging in to browse and install software."
-  [[ -n "$FAILED_PACKAGES" ]] && extra+=$'\n'"Packages that could not be installed (install them later by hand):$FAILED_PACKAGES"
-  ui_box "Arch Linux is installed" "Take the USB out and reboot.
-Your recipe is at /root/reimu.conf and the log at /var/log/reimu/install.log.
-Rerun the same install on another machine with:  reimu --config reimu.conf${extra}
+  [[ "$REIMU_SANAE" == yes ]] && extra+=$'\n'"$(t "Sanae is installed: type sanae after logging in to browse and install software.")"
+  [[ -n "$FAILED_PACKAGES" ]] && extra+=$'\n'"$(t "Packages that could not be installed (install them later by hand):")$FAILED_PACKAGES"
+  ui_box "Arch Linux is installed" "$(t "Take the USB out and reboot.")
+$(t "Your recipe is at /root/reimu.conf and the log at /var/log/reimu/install.log.")
+$(t "Rerun the same install on another machine with:  reimu --config reimu.conf")${extra}
 
-Reimu is made by Chidaruma. Like it? Visit github.com/Chidaruma696 and leave a star." 46
+$(t "Reimu is made by Chidaruma. Like it? Visit github.com/Chidaruma696 and leave a star.")" 46
   if ! (( ASSUME_YES )) && ! (( DRY_RUN )); then
     if ask_yesno "Reboot now?" y; then reboot; fi
   fi
