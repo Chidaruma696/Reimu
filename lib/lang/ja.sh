@@ -100,7 +100,7 @@ T["automatic"]="自動"
 T["own password"]="専用パスワード"
 T["locked"]="ロック"
 T["not a laptop"]="ノート PC ではない"
-T["xfce only"]="XFCE のみ"
+T["no desktop"]="デスクトップなし"
 T["as it comes"]="標準のまま"
 T["auto · %s"]="自動 · %s"
 T["manual · root %s"]="手動 · ルート %s"
@@ -214,8 +214,8 @@ T["KDE's"]="KDE のもの"
 T["Light and classic"]="軽量で古典的"
 T["Text mode"]="テキストモード"
 T["Start from a TTY"]="TTY から起動"
-T["Themes are applied automatically for XFCE only (for now)."]="テーマの自動適用は今のところ XFCE のみです。"
-T["Do you want Reimu to set a theme and icons? (No leaves XFCE as it comes)"]="Reimu にテーマとアイコンを設定させますか？（いいえ = XFCE を標準のまま）"
+T["No desktop was chosen: nothing to theme."]="デスクトップが選ばれていないため、テーマを適用する対象がありません。"
+T["Do you want Reimu to set a theme and icons? (No leaves the desktop as it comes)"]="Reimu にテーマとアイコンを設定させますか？（いいえ = デスクトップを標準のまま）"
 T["Theme"]="テーマ"
 T["XFCE's classic · light or dark · AUR"]="XFCE の定番 · ライトまたはダーク · AUR"
 T["Flat with transparency · the popular one · AUR"]="フラットで透明感あり · 人気のテーマ · AUR"
@@ -494,9 +494,13 @@ help_theme() {
   cat <<'EOF'
 テーマはウィンドウ、ボタン、メニューの見た目を変え、アイコンはメニューやファイル
 マネージャーの絵を変えます。Reimu はパッケージをインストールし、あなたのユーザー
-の既定に設定するので、最初のログインから XFCE がその見た目になります。「AUR」の
-テーマには「ソフトウェア」の項目で選ぶ AUR ヘルパー（paru または yay）が必要です。
-これは任意です。「いいえ」を選べば XFCE は標準のままです。
+の既定に設定するので、最初のログインからデスクトップがその見た目になります。
+これらは GTK テーマです。XFCE、GNOME、Cinnamon、MATE、Budgie、各ウィンドウ
+マネージャーではデスクトップ全体に適用されます。KDE Plasma、LXQt、COSMIC では
+GTK アプリとアイコンに適用され、デスクトップ自体はそれに合わせてダークまたは
+ライトになります。「AUR」のテーマには「ソフトウェア」の項目で選ぶ AUR ヘルパーが
+必要です。
+これは任意です。「いいえ」を選べばデスクトップは標準のままです。
 EOF
 }
 
@@ -512,7 +516,7 @@ Windows ではストアからプログラムをインストールしますが、
 「レシピ」もあります。プログラムをインストールするだけでなく、動く状態にまで
 整えるワンキーの設定で、通常のパッケージ管理ツールにはない機能です。例:
 サービスが起動しユーザーに権限が付いた Docker、すぐに VM を作れる QEMU 仮想
-マシン、日本語入力、追加フォント、XFCE のテーマ。
+マシン、日本語入力、追加フォント、デスクトップのテーマ。
 Reimu と同じ作者によるものです。まだ新しいソフトウェアです。pacman の代わり
 ではなく、pacman を代わりに実行します。/usr/local/bin/sanae の一つのファイル
 だけで、削除するには: sudo rm /usr/local/bin/sanae

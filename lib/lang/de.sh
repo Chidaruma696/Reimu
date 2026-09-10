@@ -100,7 +100,7 @@ T["automatic"]="automatisch"
 T["own password"]="eigenes Passwort"
 T["locked"]="gesperrt"
 T["not a laptop"]="kein Laptop"
-T["xfce only"]="nur XFCE"
+T["no desktop"]="kein Desktop"
 T["as it comes"]="wie geliefert"
 T["auto · %s"]="auto · %s"
 T["manual · root %s"]="manuell · Root %s"
@@ -214,8 +214,8 @@ T["KDE's"]="Der von KDE"
 T["Light and classic"]="Leicht und klassisch"
 T["Text mode"]="Textmodus"
 T["Start from a TTY"]="Von einer TTY starten"
-T["Themes are applied automatically for XFCE only (for now)."]="Themen werden vorerst nur bei XFCE automatisch angewendet."
-T["Do you want Reimu to set a theme and icons? (No leaves XFCE as it comes)"]="Soll Reimu ein Thema und Symbole setzen? (Nein lässt XFCE wie geliefert)"
+T["No desktop was chosen: nothing to theme."]="Kein Desktop gewählt: nichts, worauf ein Thema passt."
+T["Do you want Reimu to set a theme and icons? (No leaves the desktop as it comes)"]="Soll Reimu ein Thema und Symbole setzen? (Nein lässt den Desktop wie geliefert)"
 T["Theme"]="Thema"
 T["XFCE's classic · light or dark · AUR"]="Der XFCE-Klassiker · hell oder dunkel · AUR"
 T["Flat with transparency · the popular one · AUR"]="Flach mit Transparenz · das beliebte · AUR"
@@ -498,11 +498,14 @@ EOF
 help_theme() {
   cat <<'EOF'
 Ein Thema ändert, wie Fenster, Knöpfe und Menüs aussehen; Symbole ändern die
-Bilder in Menüs und Dateimanagern. Reimu installiert die Pakete und setzt sie als
-Vorgabe für deinen Benutzer, sodass XFCE schon bei der ersten Anmeldung so
-aussieht. "AUR"-Themen brauchen den AUR-Helfer aus dem Abschnitt Software (paru
-oder yay).
-Das ist optional: sag Nein, und XFCE bleibt genau wie geliefert.
+Bilder in Menüs und Dateimanagern. Reimu installiert die Pakete und setzt sie
+als Vorgabe für deinen Benutzer, sodass der Desktop schon bei der ersten
+Anmeldung so aussieht. Es sind GTK-Themen: unter XFCE, GNOME, Cinnamon, MATE,
+Budgie und den Fenstermanagern decken sie den ganzen Desktop ab; unter KDE
+Plasma, LXQt und COSMIC erreichen sie die GTK-Apps und die Symbole, und der
+Desktop wird passend dunkel oder hell. "AUR"-Themen brauchen den AUR-Helfer aus
+dem Abschnitt Software.
+Das ist optional: sag Nein, und der Desktop bleibt genau wie geliefert.
 EOF
 }
 
@@ -521,7 +524,7 @@ Es hat auch "Rezepte": Einrichtungen mit einer Taste, die ein Programm
 installieren UND lauffähig hinterlassen, was normale Paketverwalter nie tun.
 Beispiele: Docker mit laufendem Dienst und deinem Benutzer mit Zugriff, QEMU-
 virtuelle Maschinen bereit zum Anlegen einer VM, japanische Eingabe, zusätzliche
-Schriften, XFCE-Themen.
+Schriften, Desktop-Themen.
 Vom selben Autor wie Reimu. Es ist junge Software. Es ersetzt pacman nicht: es
 führt pacman für dich aus. Eine Datei unter /usr/local/bin/sanae; entfernen mit:
 sudo rm /usr/local/bin/sanae

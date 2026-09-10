@@ -282,9 +282,9 @@ q_dm() {
 }
 
 q_theme() {
-  [[ "$REIMU_DESKTOP" == xfce ]] || { ui_note "Themes are applied automatically for XFCE only (for now)."; return 0; }
+  [[ "$REIMU_DESKTOP" == none ]] && { ui_note "No desktop was chosen: nothing to theme."; return 0; }
   ui_help "$(help_theme)"
-  if ! ask_yesno "Do you want Reimu to set a theme and icons? (No leaves XFCE as it comes)" "$( [[ "$REIMU_THEME" != default || "$REIMU_ICONS" != default ]] && echo y || echo n )"; then
+  if ! ask_yesno "Do you want Reimu to set a theme and icons? (No leaves the desktop as it comes)" "$( [[ "$REIMU_THEME" != default || "$REIMU_ICONS" != default ]] && echo y || echo n )"; then
     REIMU_THEME=default; REIMU_ICONS=default; return 0
   fi
   ask_choice REIMU_THEME "Theme" "$REIMU_THEME" \
@@ -506,7 +506,7 @@ wiz_guided() {
 }
 
 wiz_theme_value() {
-  if [[ "$REIMU_DESKTOP" != xfce ]]; then t 'xfce only'
+  if [[ "$REIMU_DESKTOP" == none ]]; then t 'no desktop'
   elif [[ "$REIMU_THEME" == default && "$REIMU_ICONS" == default ]]; then t 'as it comes'
   else printf '%s %s · %s' "$REIMU_THEME" "$REIMU_THEME_VARIANT" "$REIMU_ICONS"; fi
 }

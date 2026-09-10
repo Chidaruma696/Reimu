@@ -100,7 +100,7 @@ T["automatic"]="automatico"
 T["own password"]="password propria"
 T["locked"]="bloccato"
 T["not a laptop"]="non è un portatile"
-T["xfce only"]="solo XFCE"
+T["no desktop"]="nessun desktop"
 T["as it comes"]="com'è"
 T["auto · %s"]="auto · %s"
 T["manual · root %s"]="manuale · root %s"
@@ -214,8 +214,8 @@ T["KDE's"]="Quello di KDE"
 T["Light and classic"]="Leggero e classico"
 T["Text mode"]="Modalità testo"
 T["Start from a TTY"]="Avvio da una TTY"
-T["Themes are applied automatically for XFCE only (for now)."]="I temi vengono applicati automaticamente solo su XFCE (per ora)."
-T["Do you want Reimu to set a theme and icons? (No leaves XFCE as it comes)"]="Vuoi che Reimu imposti un tema e le icone? (No lascia XFCE com'è)"
+T["No desktop was chosen: nothing to theme."]="Nessun desktop scelto: niente a cui applicare un tema."
+T["Do you want Reimu to set a theme and icons? (No leaves the desktop as it comes)"]="Vuoi che Reimu imposti un tema e le icone? (No lascia il desktop com'è)"
 T["Theme"]="Tema"
 T["XFCE's classic · light or dark · AUR"]="Il classico di XFCE · chiaro o scuro · AUR"
 T["Flat with transparency · the popular one · AUR"]="Piatto con trasparenze · quello popolare · AUR"
@@ -498,10 +498,12 @@ help_theme() {
   cat <<'EOF'
 Un tema cambia l'aspetto di finestre, pulsanti e menu; le icone cambiano le
 immagini nei menu e nei gestori di file. Reimu installa i pacchetti e li imposta
-come predefiniti per il tuo utente, così XFCE ha già quell'aspetto al primo
-accesso. I temi "AUR" richiedono l'helper AUR della sezione Software (paru o
-yay).
-È facoltativo: rispondi No e XFCE resta esattamente com'è.
+come predefiniti per il tuo utente, così il desktop ha già quell'aspetto al
+primo accesso. Sono temi GTK: su XFCE, GNOME, Cinnamon, MATE, Budgie e i gestori
+di finestre coprono tutto il desktop; su KDE Plasma, LXQt e COSMIC arrivano alle
+app GTK e alle icone, e il desktop diventa scuro o chiaro in tinta. I temi "AUR"
+richiedono l'helper AUR della sezione Software.
+È facoltativo: rispondi No e il desktop resta esattamente com'è.
 EOF
 }
 
@@ -519,7 +521,7 @@ Ha anche le "ricette": configurazioni con un tasto che installano un programma
 E lo lasciano funzionante, cosa che i gestori di pacchetti normali non fanno
 mai. Esempi: Docker con il servizio avviato e il tuo utente autorizzato,
 macchine virtuali QEMU pronte per creare una VM, scrittura in giapponese, font
-aggiuntivi, temi XFCE.
+aggiuntivi, temi per il desktop.
 Dello stesso autore di Reimu. È un software giovane. Non sostituisce pacman: lo
 esegue per te. Un solo file in /usr/local/bin/sanae; per toglierlo:
 sudo rm /usr/local/bin/sanae

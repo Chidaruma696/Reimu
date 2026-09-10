@@ -100,7 +100,7 @@ T["automatic"]="automático"
 T["own password"]="senha própria"
 T["locked"]="bloqueada"
 T["not a laptop"]="não é notebook"
-T["xfce only"]="só XFCE"
+T["no desktop"]="sem área de trabalho"
 T["as it comes"]="como vem"
 T["auto · %s"]="auto · %s"
 T["manual · root %s"]="manual · root %s"
@@ -214,8 +214,8 @@ T["KDE's"]="O do KDE"
 T["Light and classic"]="Leve e clássico"
 T["Text mode"]="Modo texto"
 T["Start from a TTY"]="Iniciar de um TTY"
-T["Themes are applied automatically for XFCE only (for now)."]="Os temas são aplicados automaticamente só no XFCE (por enquanto)."
-T["Do you want Reimu to set a theme and icons? (No leaves XFCE as it comes)"]="Quer que o Reimu defina um tema e ícones? (Não deixa o XFCE como vem)"
+T["No desktop was chosen: nothing to theme."]="Nenhuma área de trabalho escolhida: nada para aplicar tema."
+T["Do you want Reimu to set a theme and icons? (No leaves the desktop as it comes)"]="Quer que o Reimu defina um tema e ícones? (Não deixa a área de trabalho como vem)"
 T["Theme"]="Tema"
 T["XFCE's classic · light or dark · AUR"]="O clássico do XFCE · claro ou escuro · AUR"
 T["Flat with transparency · the popular one · AUR"]="Plano com transparência · o popular · AUR"
@@ -498,9 +498,12 @@ help_theme() {
   cat <<'EOF'
 Um tema muda a aparência de janelas, botões e menus; os ícones mudam as imagens
 dos menus e dos gerenciadores de arquivos. O Reimu instala os pacotes e define
-como padrão para o seu usuário, então o XFCE já aparece assim no primeiro login.
-Temas "AUR" precisam do ajudante do AUR da seção Software (paru ou yay).
-É opcional: diga Não e o XFCE fica exatamente como vem.
+como padrão para o seu usuário, então a área de trabalho já aparece assim no
+primeiro login. São temas GTK: no XFCE, GNOME, Cinnamon, MATE, Budgie e nos
+gerenciadores de janelas cobrem a área de trabalho inteira; no KDE Plasma, LXQt
+e COSMIC chegam aos apps GTK e aos ícones, e a área de trabalho fica escura ou
+clara para combinar. Temas "AUR" precisam do ajudante do AUR da seção Software.
+É opcional: diga Não e a área de trabalho fica exatamente como vem.
 EOF
 }
 
@@ -518,7 +521,7 @@ Também tem "receitas": instalações de uma tecla que instalam um programa E o
 deixam funcionando, coisa que gerenciadores de pacotes comuns nunca fazem.
 Exemplos: Docker com o serviço rodando e seu usuário com acesso, máquinas
 virtuais QEMU prontas para criar uma VM, digitação em japonês, fontes extras,
-temas do XFCE.
+temas de área de trabalho.
 Do mesmo autor do Reimu. É um software novo. Não substitui o pacman: roda o
 pacman por você. Um único arquivo em /usr/local/bin/sanae; para remover:
 sudo rm /usr/local/bin/sanae
